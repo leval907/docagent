@@ -1,27 +1,73 @@
-# DocAgent Parser - Минимальная конфигурация (только парсер)
-version: '3.8'
+# DocAgent - Production Ready с PostgreSQL 18 + pgvector
+version: "3.9"
 
 services:
-  # Парсер документации
-  docagent:
+  # PostgreSQL 18 с pgvector для векторного поиска
+  postgres18:
+    image: ankane/pgvector:latest   # PostgreSQL 18 + pgvector
+    container_name: docagent-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-docagent}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-secure_pass_2025}
+      POSTGRES_DB: ${POSTGRES_DB:-docagent}
+    ports:
+      - "${POSTGRES_PORT:-5436}:5432"  # внешний порт 5436 → внутренний 5432
+    volumes:
+      - ${POSTGRES_DATA_PATH:-./pgdata}:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-docagent}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - docagent-net
+
+  # Краулер документации с интеграцией S3 и PostgreSQL
+  crawler:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: docagent-parser
-    volumes:
-      # Монтируем директории для ввода/вывода
-      - ./knowledge_base:/app/knowledge_base
-      - ./logs:/app/logs
-      - ./config:/app/config:ro
-      # Если нужно редактировать скрипты на лету
-      # - ./scripts:/app/scripts:ro
+    container_name: docagent-crawler
+    depends_on:
+      postgres18:
+        condition: service_healthy
     environment:
+      # S3 Configuration (Beget)
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - S3_ENDPOINT=${S3_ENDPOINT:-https://s3.ru1.storage.beget.cloud}
+      - S3_BUCKET=${S3_BUCKET}
+      # PostgreSQL Configuration
+      - PG_HOST=postgres18
+      - PG_PORT=5432
+      - PG_DATABASE=${POSTGRES_DB:-docagent}
+      - PG_USER=${POSTGRES_USER:-docagent}
+      - PG_PASSWORD=${POSTGRES_PASSWORD:-secure_pass_2025}
+      # Python Configuration
+      - PYTHONIOENCODING=utf-8
       - PYTHONUNBUFFERED=1
-    # Запускать вручную через docker-compose run
-    # Например: docker-compose run --rm docagent scripts/wrapper_crawler.py --app dbgpt
+    volumes:
+      - ./knowledge_base:/app/knowledge_base
+      - ./config:/app/config:ro
+      - ./logs:/app/logs
+    networks:
+      - docagent-net
     profiles:
-      - manual
+      - crawler
+    command: >
+      python scripts/crawl_and_clean.py
+        --app ${APP:-openspg}
+        --s3-bucket ${S3_BUCKET}
+        --s3-endpoint ${S3_ENDPOINT:-https://s3.ru1.storage.beget.cloud}
+        --pg-host postgres18
+        --pg-database ${POSTGRES_DB:-docagent}
+        --pg-user ${POSTGRES_USER:-docagent}
+        --pg-password ${POSTGRES_PASSWORD:-secure_pass_2025}
 
 networks:
-  default:
-    name: docagent_network
+  docagent-net:
+    name: ${NETWORK_NAME:-ducem-net}
+    external: ${NETWORK_EXTERNAL:-false}
+    driver: bridge
