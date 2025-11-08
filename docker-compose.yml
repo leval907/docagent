@@ -1,0 +1,27 @@
+# DocAgent Parser - Минимальная конфигурация (только парсер)
+version: '3.8'
+
+services:
+  # Парсер документации
+  docagent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: docagent-parser
+    volumes:
+      # Монтируем директории для ввода/вывода
+      - ./knowledge_base:/app/knowledge_base
+      - ./logs:/app/logs
+      - ./config:/app/config:ro
+      # Если нужно редактировать скрипты на лету
+      # - ./scripts:/app/scripts:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+    # Запускать вручную через docker-compose run
+    # Например: docker-compose run --rm docagent scripts/wrapper_crawler.py --app dbgpt
+    profiles:
+      - manual
+
+networks:
+  default:
+    name: docagent_network

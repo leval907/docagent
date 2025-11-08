@@ -1,0 +1,78 @@
+# Конфигурация источников документации для DocAgent
+
+apps:
+  # DB-GPT AWEL Documentation  
+  dbgpt:
+    name: "DB-GPT"
+    description: "AWEL (Agentic Workflow Expression Language) Documentation"
+    url: "https://docs.dbgpt.cn/docs/awel/cookbook/"
+    depth: 2
+    max_pages: 50
+    enabled: false
+    category: "ai-frameworks"
+    tags:
+      - "awel"
+      - "rag"
+      - "ai-agents"
+  
+  # Python Docs
+  python_docs:
+    name: "Python Documentation"
+    description: "Python Official Tutorial"
+    url: "https://docs.python.org/3/tutorial/index.html"
+    depth: 1
+    max_pages: 30
+    enabled: false
+    category: "programming"
+    tags:
+      - "python"
+      - "tutorial"
+
+  # Requesty AI Documentation
+  requesty:
+    name: "Requesty AI"
+    description: "Requesty AI Documentation"
+    url: "https://docs.requesty.ai/"
+    depth: 3
+    max_pages: 50
+    enabled: false
+    category: "ai-tools"
+    tags:
+      - "ai"
+      - "api"
+
+  # NocoDB Documentation
+  nocodb:
+    name: "NocoDB"
+    description: "NocoDB Product Documentation"
+    url: "https://nocodb.com/docs/product-docs"
+    depth: 2
+    max_pages: 50
+    enabled: false
+    category: "database-tools"
+    tags:
+      - "database"
+      - "no-code"
+      - "api"
+
+  # OpenSPG Documentation
+  openspg:
+    name: "OpenSPG"
+    description: "OpenSPG Knowledge Graph Engine Documentation"
+    url: "https://openspg.yuque.com/ndx6g9/0.8.en"
+    depth: 2
+    max_pages: 100
+    enabled: true
+    category: "knowledge-graph"
+    tags:
+      - "knowledge-graph"
+      - "spg"
+      - "graph-engine"
+
+# Глобальные настройки
+global:
+  output_base_dir: "./knowledge_base"
+  max_retries: 3
+  user_agent: "DocAgent/2.0 (Crawl4AI Documentation Crawler)"
+  default_depth: 2
+  default_max_pages: 50
