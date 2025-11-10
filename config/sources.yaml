@@ -69,6 +69,21 @@ apps:
       - "spg"
       - "graph-engine"
 
+  # DuckDB Documentation
+  duckdb:
+    name: "DuckDB"
+    description: "DuckDB In-Process Analytical Database Documentation"
+    url: "https://duckdb.org/docs/stable/"
+    depth: 2
+    max_pages: 100
+    enabled: true
+    category: "database"
+    tags:
+      - "database"
+      - "analytics"
+      - "sql"
+      - "olap"
+
 # Глобальные настройки
 global:
   output_base_dir: "./knowledge_base"

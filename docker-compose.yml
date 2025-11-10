@@ -1,10 +1,11 @@
-# DocAgent - Production Ready с PostgreSQL 18 + pgvector
+# DocAgent - Production Ready Pipeline
+# PostgreSQL 18 + pgvector + ChromaDB + Prefect + FastAPI + DuckDB
 version: "3.9"
 
 services:
-  # PostgreSQL 18 с pgvector для векторного поиска
+  # PostgreSQL 18 с pgvector для метаданных и векторов
   postgres18:
-    image: ankane/pgvector:latest   # PostgreSQL 18 + pgvector
+    image: ankane/pgvector:latest
     container_name: docagent-postgres
     restart: always
     environment:
@@ -12,7 +13,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-secure_pass_2025}
       POSTGRES_DB: ${POSTGRES_DB:-docagent}
     ports:
-      - "${POSTGRES_PORT:-5436}:5432"  # внешний порт 5436 → внутренний 5432
+      - "${POSTGRES_PORT:-5436}:5432"
     volumes:
       - ${POSTGRES_DATA_PATH:-./pgdata}:/var/lib/postgresql/data
       - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
@@ -24,7 +25,89 @@ services:
     networks:
       - docagent-net
 
-  # Краулер документации с интеграцией S3 и PostgreSQL
+  # ChromaDB - векторная база данных
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: docagent-chromadb
+    restart: always
+    ports:
+      - "${CHROMA_PORT:-8000}:8000"
+    volumes:
+      - ${CHROMA_DATA_PATH:-./chromadata}:/chroma/chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+      - ANONYMIZED_TELEMETRY=${CHROMA_TELEMETRY:-FALSE}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - docagent-net
+
+  # Prefect Server - оркестрация workflow
+  prefect-server:
+    image: prefecthq/prefect:2-latest
+    container_name: docagent-prefect
+    restart: always
+    ports:
+      - "${PREFECT_PORT:-4200}:4200"
+    environment:
+      - PREFECT_API_URL=http://prefect-server:4200/api
+      - PREFECT_SERVER_API_HOST=0.0.0.0
+      - PREFECT_API_DATABASE_CONNECTION_URL=postgresql+asyncpg://${POSTGRES_USER:-docagent}:${POSTGRES_PASSWORD:-secure_pass_2025}@postgres18:5432/${POSTGRES_DB:-docagent}
+    command: prefect server start --host 0.0.0.0
+    depends_on:
+      postgres18:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4200/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - docagent-net
+
+  # FastAPI - REST API для доступа к данным
+  fastapi:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: docagent-api
+    restart: always
+    ports:
+      - "${API_PORT:-8080}:8080"
+    environment:
+      # Database connections
+      - POSTGRES_URL=postgresql://${POSTGRES_USER:-docagent}:${POSTGRES_PASSWORD:-secure_pass_2025}@postgres18:5432/${POSTGRES_DB:-docagent}
+      - CHROMA_URL=http://chromadb:8000
+      - DUCKDB_PATH=/app/data/analytics.duckdb
+      # S3 Configuration
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - S3_ENDPOINT=${S3_ENDPOINT:-https://s3.ru1.storage.beget.cloud}
+      - S3_BUCKET=${S3_BUCKET}
+      # API Configuration
+      - API_TITLE=DocAgent API
+      - API_VERSION=1.0.0
+      - CORS_ORIGINS=${CORS_ORIGINS:-*}
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    depends_on:
+      postgres18:
+        condition: service_healthy
+      chromadb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - docagent-net
+
+  # Crawler - краулер документации
   crawler:
     build:
       context: .
@@ -33,18 +116,27 @@ services:
     depends_on:
       postgres18:
         condition: service_healthy
+      chromadb:
+        condition: service_healthy
+      prefect-server:
+        condition: service_healthy
     environment:
-      # S3 Configuration (Beget)
+      # S3 Configuration
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       - S3_ENDPOINT=${S3_ENDPOINT:-https://s3.ru1.storage.beget.cloud}
       - S3_BUCKET=${S3_BUCKET}
-      # PostgreSQL Configuration
+      # Database Configuration
       - PG_HOST=postgres18
       - PG_PORT=5432
       - PG_DATABASE=${POSTGRES_DB:-docagent}
       - PG_USER=${POSTGRES_USER:-docagent}
       - PG_PASSWORD=${POSTGRES_PASSWORD:-secure_pass_2025}
+      # ChromaDB Configuration
+      - CHROMA_URL=http://chromadb:8000
+      - CHROMA_COLLECTION=${CHROMA_COLLECTION:-documents}
+      # Prefect Configuration
+      - PREFECT_API_URL=http://prefect-server:4200/api
       # Python Configuration
       - PYTHONIOENCODING=utf-8
       - PYTHONUNBUFFERED=1
@@ -52,6 +144,7 @@ services:
       - ./knowledge_base:/app/knowledge_base
       - ./config:/app/config:ro
       - ./logs:/app/logs
+      - ./data:/app/data
     networks:
       - docagent-net
     profiles:
@@ -65,6 +158,22 @@ services:
         --pg-database ${POSTGRES_DB:-docagent}
         --pg-user ${POSTGRES_USER:-docagent}
         --pg-password ${POSTGRES_PASSWORD:-secure_pass_2025}
+
+  # Prefect Worker - выполнение задач
+  prefect-worker:
+    image: prefecthq/prefect:2-latest
+    container_name: docagent-worker
+    restart: always
+    environment:
+      - PREFECT_API_URL=http://prefect-server:4200/api
+    command: prefect worker start --pool default-agent-pool
+    depends_on:
+      prefect-server:
+        condition: service_healthy
+    networks:
+      - docagent-net
+    profiles:
+      - worker
 
 networks:
   docagent-net:
