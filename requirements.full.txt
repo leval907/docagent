@@ -20,8 +20,25 @@ asyncio
 # === Аналитика данных ===
 duckdb==1.4.1
 pandas
+numpy
 openpyxl  # для Excel
 xlsxwriter
+streamlit
+plotly
+pyxlsb
+msoffcrypto-tool
+xlrd==1.2.0
+scipy
+financetoolkit
+quantstats
+statsmodels
+pydantic>=2.0
+
+# === Визуализация графов ===
+streamlit-agraph
+graphviz
+networkx
+pyvis
 
 # === S3 хранилище ===
 boto3
@@ -35,7 +52,10 @@ pgvector
 # === API (опционально) ===
 fastapi
 uvicorn
-pydantic
+python-multipart
+python-jose[cryptography]
+passlib[bcrypt]
+python-arango
 
 # === Утилиты ===
 python-dotenv
@@ -44,4 +64,4 @@ requests
 tqdm
 
 # === Граф БД (опционально) ===
-# pyArango  # раскомментируй если нужен ArangoDB
+pyArango  # раскомментируй если нужен ArangoDB

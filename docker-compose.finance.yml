@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: finance_backend
+    ports:
+      - "8000:8000"
+    environment:
+      - ARANGO_HOST=arangodb
+      - ARANGO_PORT=8529
+      - ARANGO_USER=root
+      - ARANGO_PASSWORD=strongpassword
+      - ARANGO_DB_NAME=finance_analytics
+    volumes:
+      - ./data:/opt/docagent/data
+      - ./finance_core:/opt/docagent/finance_core
+      - ./backend:/opt/docagent/backend
+    networks:
+      - opt-network
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: finance_frontend
+    ports:
+      - "8501:8501"
+    environment:
+      - BACKEND_URL=http://backend:8000
+    volumes:
+      - ./frontend:/opt/docagent/frontend
+    networks:
+      - opt-network
+    depends_on:
+      - backend
+
+networks:
+  opt-network:
+    external: true

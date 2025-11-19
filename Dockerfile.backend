@@ -1,0 +1,14 @@
+FROM python:3.12-slim
+
+WORKDIR /opt/docagent
+
+COPY requirements.full.txt .
+RUN pip install --no-cache-dir -r requirements.full.txt
+
+COPY finance_core ./finance_core
+COPY backend ./backend
+COPY data ./data
+
+ENV PYTHONPATH=/opt/docagent
+
+CMD ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
