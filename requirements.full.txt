@@ -1,0 +1,47 @@
+# DocAgent - Full Requirements
+# Полный стек зависимостей для финансовой аналитики
+
+# === Обработка документов ===
+docling==2.61.2
+torch==2.9.0
+transformers==4.57.1
+pypdfium2
+python-docx
+beautifulsoup4
+lxml
+pillow
+
+# === Веб-краулинг ===
+crawl4ai==0.7.6
+playwright==1.55.0
+aiohttp
+asyncio
+
+# === Аналитика данных ===
+duckdb==1.4.1
+pandas
+openpyxl  # для Excel
+xlsxwriter
+
+# === S3 хранилище ===
+boto3
+botocore
+
+# === Векторный поиск ===
+sentence-transformers
+psycopg2-binary
+pgvector
+
+# === API (опционально) ===
+fastapi
+uvicorn
+pydantic
+
+# === Утилиты ===
+python-dotenv
+pyyaml
+requests
+tqdm
+
+# === Граф БД (опционально) ===
+# pyArango  # раскомментируй если нужен ArangoDB

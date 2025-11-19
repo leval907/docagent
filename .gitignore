@@ -43,12 +43,16 @@ logs/
 *.log
 
 # Knowledge base (exclude actual content, but keep structure)
-knowledge_base/*
+knowledge_base/duckdb/**/*.csv
+knowledge_base/duckdb/**/*.json
+knowledge_base/duckdb/**/*.xlsx
+knowledge_base/duckdb/**/*.parquet
 !knowledge_base/.gitkeep
 
 # Indexes (generated files)
-*.json
-!config/*.json
+*.duckdb
+*.duckdb.wal
+*.db
 
 # OS
 .DS_Store
@@ -64,3 +68,6 @@ tools/
 
 # Test outputs
 test_output/
+
+# Data
+data/

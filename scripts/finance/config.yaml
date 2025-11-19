@@ -1,0 +1,30 @@
+# Конфигурация проекта консолидации ОСВ
+
+database:
+  path: "./osv_database.duckdb"
+
+organizations:
+  - name: "Грандпром"
+    folder: "../Грандпром"
+  - name: "Гросс групп_ДИ"
+    folder: "../Гросс групп_ДИ"
+  - name: "Гросс групп_М"
+    folder: "../Гросс групп_М"
+  - name: "СГК_Регион"
+    folder: "../СГК_Регион"
+  - name: "Юг истейт"
+    folder: "../Юг истейт"
+
+accounts:
+  - "60.01"
+  - "60.02"
+  - "62.01"
+  - "62.02"
+
+file_patterns:
+  osv_detailed: "osv_detailed_sql_ОСВ_{account}_{org_short}.xlsx"
+  osv_summary: "osv_summary_{org_lower}.xlsx"
+
+templates:
+  accounts: "../accounts_template_sorted.xlsx"
+  osv: "../osv_detailed_sql_template.xlsx"

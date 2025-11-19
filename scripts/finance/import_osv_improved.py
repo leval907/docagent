@@ -1,0 +1,244 @@
+"""
+Улучшенный импорт данных ОСВ в DuckDB с обработкой различных форматов
+"""
+import duckdb
+import pandas as pd
+import yaml
+from pathlib import Path
+import glob
+import numpy as np
+
+
+def load_config():
+    """Загрузка конфигурации"""
+    with open('config.yaml', 'r', encoding='utf-8') as f:
+        return yaml.safe_load(f)
+
+
+def clean_excel_data(df):
+    """Очистка и стандартизация данных из Excel"""
+    
+    # Определяем стандартные колонки
+    expected_columns = [
+        'company_name', 'inn', 'period', 'account', 'subkonto', 
+        'opening_debit', 'opening_credit', 'turnover_debit', 'turnover_credit', 
+        'closing_debit', 'closing_credit', 'source_file'
+    ]
+    
+    # Удаляем unnamed колонки
+    df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
+    
+    # Если количество колонок соответствует ожидаемому, переименовываем
+    if len(df.columns) == len(expected_columns):
+        df.columns = expected_columns
+    elif len(df.columns) == len(expected_columns) - 1:
+        # Если нет source_file колонки
+        df.columns = expected_columns[:-1]
+        df['source_file'] = None
+    
+    # Удаляем полностью пустые строки
+    df = df.dropna(how='all')
+    
+    # Заполняем NaN в числовых колонках нулями
+    numeric_columns = ['opening_debit', 'opening_credit', 'turnover_debit', 
+                      'turnover_credit', 'closing_debit', 'closing_credit']
+    
+    for col in numeric_columns:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+    
+    # Очищаем текстовые поля
+    text_columns = ['company_name', 'subkonto']
+    for col in text_columns:
+        if col in df.columns:
+            df[col] = df[col].astype(str).str.strip()
+            df[col] = df[col].replace(['nan', 'None', ''], None)
+    
+    return df
+
+
+def create_database(db_path):
+    """Создание базы данных и схемы"""
+    conn = duckdb.connect(db_path)
+    
+    # Удаляем таблицу если существует (для перезапуска)
+    conn.execute("DROP TABLE IF EXISTS osv_detailed")
+    
+    # Создание таблицы для детальных данных ОСВ
+    conn.execute("""
+        CREATE TABLE osv_detailed (
+            company_name VARCHAR,
+            inn VARCHAR,
+            period VARCHAR,
+            account VARCHAR,
+            subkonto VARCHAR,
+            opening_debit DECIMAL(18,2),
+            opening_credit DECIMAL(18,2),
+            turnover_debit DECIMAL(18,2),
+            turnover_credit DECIMAL(18,2),
+            closing_debit DECIMAL(18,2),
+            closing_credit DECIMAL(18,2),
+            source_file VARCHAR,
+            import_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    
+    # Создание индексов
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_company ON osv_detailed(company_name)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_account ON osv_detailed(account)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_subkonto ON osv_detailed(subkonto)")
+    
+    return conn
+
+
+def import_excel_file(file_path, conn):
+    """Импорт одного Excel файла"""
+    try:
+        print(f"📊 Обработка: {file_path.name}")
+        
+        # Читаем файл
+        df = pd.read_excel(file_path)
+        
+        # Очищаем данные
+        df_clean = clean_excel_data(df)
+        
+        if df_clean.empty:
+            print(f"   ⚠️ Файл пустой после очистки")
+            return 0
+        
+        # Добавляем информацию об источнике
+        if 'source_file' not in df_clean.columns or df_clean['source_file'].isna().all():
+            df_clean['source_file'] = file_path.name
+        
+        # Загружаем в DuckDB (исключаем import_date, он автоматический)
+        conn.execute("""
+            INSERT INTO osv_detailed (
+                company_name, inn, period, account, subkonto, 
+                opening_debit, opening_credit, turnover_debit, turnover_credit, 
+                closing_debit, closing_credit, source_file
+            ) SELECT * FROM df_clean
+        """)
+        
+        print(f"   ✅ Загружено записей: {len(df_clean):,}")
+        
+        # Показываем пример данных
+        sample = df_clean.head(2)
+        print(f"   📋 Пример данных:")
+        print(f"      Компания: {sample['company_name'].iloc[0] if 'company_name' in sample else 'N/A'}")
+        print(f"      Счет: {sample['account'].iloc[0] if 'account' in sample else 'N/A'}")
+        print(f"      Контрагент: {sample['subkonto'].iloc[0] if 'subkonto' in sample else 'N/A'}")
+        
+        return len(df_clean)
+        
+    except Exception as e:
+        print(f"   ❌ Ошибка: {e}")
+        return 0
+
+
+def main():
+    """Основная функция"""
+    config = load_config()
+    
+    # Создание базы данных
+    db_path = config['database']['path']
+    conn = create_database(db_path)
+    
+    print(f"\n📊 Импорт данных ОСВ в {db_path}")
+    print("="*80)
+    
+    total_records = 0
+    total_files = 0
+    
+    # Импорт данных по каждой организации
+    for org_config in config['organizations']:
+        org_name = org_config['name']
+        org_folder = Path(org_config['folder'])
+        
+        print(f"\n🏢 {org_name}")
+        print("-" * 60)
+        
+        if not org_folder.exists():
+            print(f"   ❌ Папка не найдена: {org_folder}")
+            continue
+        
+        # Поиск всех файлов osv_detailed_sql_*.xlsx
+        pattern = str(org_folder / "osv_detailed_sql_*.xlsx")
+        files = glob.glob(pattern)
+        
+        if not files:
+            print(f"   ⚠️ Файлы osv_detailed_sql_*.xlsx не найдены")
+            continue
+        
+        org_records = 0
+        for file_path in files:
+            file_path = Path(file_path)
+            records = import_excel_file(file_path, conn)
+            org_records += records
+            total_files += 1
+        
+        print(f"   📈 Итого по организации: {org_records:,} записей")
+        total_records += org_records
+    
+    print(f"\n✅ ИМПОРТ ЗАВЕРШЕН!")
+    print("="*80)
+    print(f"📊 Всего обработано файлов: {total_files}")
+    print(f"📈 Всего загружено записей: {total_records:,}")
+    
+    # Статистика по базе данных
+    if total_records > 0:
+        print(f"\n📋 СТАТИСТИКА ПО БАЗЕ ДАННЫХ:")
+        print("-" * 40)
+        
+        # Общая статистика
+        stats = conn.execute("""
+            SELECT 
+                COUNT(*) as total_records,
+                COUNT(DISTINCT company_name) as companies,
+                COUNT(DISTINCT account) as accounts,
+                COUNT(DISTINCT subkonto) as counterparties
+            FROM osv_detailed
+            WHERE subkonto IS NOT NULL
+        """).df()
+        
+        print(f"Записей: {stats['total_records'].iloc[0]:,}")
+        print(f"Компаний: {stats['companies'].iloc[0]}")
+        print(f"Счетов: {stats['accounts'].iloc[0]}")
+        print(f"Контрагентов: {stats['counterparties'].iloc[0]:,}")
+        
+        # Статистика по компаниям
+        comp_stats = conn.execute("""
+            SELECT 
+                company_name,
+                COUNT(*) as records,
+                COUNT(DISTINCT account) as accounts
+            FROM osv_detailed
+            GROUP BY company_name
+            ORDER BY records DESC
+        """).df()
+        
+        print(f"\n📊 По компаниям:")
+        for _, row in comp_stats.iterrows():
+            print(f"   {row['company_name']}: {row['records']:,} записей, {row['accounts']} счетов")
+        
+        # Статистика по счетам
+        acc_stats = conn.execute("""
+            SELECT 
+                account,
+                COUNT(*) as records,
+                SUM(turnover_debit) as total_debit,
+                SUM(turnover_credit) as total_credit
+            FROM osv_detailed
+            GROUP BY account
+            ORDER BY account
+        """).df()
+        
+        print(f"\n💰 По счетам:")
+        for _, row in acc_stats.iterrows():
+            print(f"   {row['account']}: {row['records']:,} записей, "
+                  f"Дебет: {row['total_debit']:,.0f}, Кредит: {row['total_credit']:,.0f}")
+    
+    conn.close()
+
+
+if __name__ == "__main__":
+    main()

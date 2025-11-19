@@ -1,269 +1,282 @@
-# 🤖 DocAgent - AI-Powered Documentation Pipeline
+# DocAgent - Knowledge Management & Analytics Platform
 
-Автоматизированный сбор, обработка и векторный поиск по технической документации.
+Интегрированная платформа для финансового консалтинга, объединяющая обработку документов, веб-аналитику, работу с данными и семантический поиск.
 
-## 🚀 Два режима работы
+## 🎯 Для кого
 
-### 🧪 **Lite Mode** - Для экспериментов (рекомендуется для старта)
+Платформа создана для финансовых консультантов и аналитиков, работающих с большими объемами:
+- Финансовых отчетов и презентаций
+- Неструктурированных данных из разных источников
+- Аналитических таблиц и баз данных
+- Знаний из прошлых проектов
 
-**Легковесная версия на SQLite** без Docker:
-- ✅ Chunking текста с настраиваемым размером
-- ✅ Локальные embeddings через sentence-transformers
-- ✅ Векторный поиск через cosine similarity
-- ✅ Один файл базы данных (SQLite)
-- ✅ Быстрый старт за 3 минуты
+## ⚡ Ключевые возможности
 
-👉 **[QUICKSTART_LITE.md](./QUICKSTART_LITE.md)** - Начните отсюда!
+### 1. **Обработка документов** (Docling)
+- Конвертация PDF/DOCX/HTML → Markdown
+- Извлечение таблиц, графиков, структуры
+- Автоматическая загрузка в S3 (Beget Cloud)
+- Сохранение метаданных и хэшей файлов
 
-### 🏢 **Production Mode** - Для реальных проектов
+**Применение:** Обработка финансовых отчетов клиентов, контрактов, презентаций
 
-**Полный стек с Docker:**
-- PostgreSQL 18 + pgvector для метаданных
-- ChromaDB для векторного поиска
-- Prefect для workflow orchestration
-- FastAPI для REST API
-- DuckDB для аналитики
+### 2. **Веб-разведка** (Crawl4AI)
+- Парсинг сайтов компаний с JavaScript
+- Извлечение структурированного контента
+- Автоматическое сохранение в S3
+- Поддержка многостраничного обхода
 
-👉 **[COMPLETE_STACK.md](./COMPLETE_STACK.md)** - Production deployment
+**Применение:** Анализ конкурентов, сбор рыночных данных, мониторинг компаний
 
-## 🎯 Основные возможности
+### 3. **Аналитика данных** (DuckDB)
+- Импорт Excel/CSV/JSON без схемы
+- Автоматическое определение связей между таблицами
+- SQL-запросы к разнородным источникам
+- Экспорт в Parquet/CSV/JSON
+- **Модуль Finance:** Работа с ОСВ (оборотно-сальдовые ведомости)
 
-- �️ **Smart Crawling**: Crawl4AI с поддержкой JavaScript (React, Vue, SPA)
-- 📄 **Chunking**: Умная разбивка документов с overlap
-- 🧠 **Embeddings**: Локальные (sentence-transformers) или API (OpenAI)
-- 🔍 **Vector Search**: Семантический поиск по документации
-- ☁️ **S3 Storage**: Совместимость с Beget, AWS, MinIO
-- �️ **Flexible DB**: SQLite для экспериментов, PostgreSQL для production
-- 🔄 **Automation**: Prefect workflows для автоматизации
+**Применение:** Консолидация финансовых данных, поиск зависимостей в датасетах, бухгалтерская отчетность
 
-## ⚡ Quick Start (3 минуты)
+### 4. **База знаний** (PostgreSQL + pgvector)
+- Семантический поиск по документам
+- Векторные эмбеддинги (384 измерения)
+- Хранение истории обработки
+- Аналитические витрины данных
 
-```bash
-# 1. Установка
-pip install sentence-transformers crawl4ai
+**Применение:** Быстрый поиск похожих кейсов, извлечение инсайтов из прошлого опыта
 
-# 2. Загрузка документов
-cd D:\docs\DocAgent
-Get-ChildItem "knowledge_base\openspg\*.md" | ForEach-Object {
-    python scripts\pipeline_lite.py load $_.FullName --app openspg
-}
+### 5. **Граф знаний** (ArangoDB, в разработке)
+- Связи между компаниями, людьми, проектами
+- Граф транзакций и контрактов
+- Визуализация сетей влияния
 
-# 3. Поиск
-python scripts\pipeline_lite.py search "knowledge graph" --app openspg
+**Применение:** Анализ бенефициаров, поиск скрытых связей
 
-# 4. Статистика
-python scripts\pipeline_lite.py stats
+Enterprise-grade platform for document processing, web intelligence, and data analytics.
+
+## Features
+
+- 📄 **Document Processing**: PDF, DOCX, HTML → Markdown
+- 🌐 **Web Crawler**: Extract content from websites
+- 📊 **Data Analytics**: Excel, CSV, JSON analysis with DuckDB
+- 🔍 **Semantic Search**: Vector-based search with PostgreSQL + pgvector
+- 🕸️ **Knowledge Graph**: ArangoDB graph database
+- ⚡ **Workflow Automation**: Prefect orchestration
+- 🔗 **REST API**: FastAPI endpoints
+
+## 📁 Структура проекта
+
 ```
-
-**Результат за 3 минуты:**
+docagent/
+├── docs/                    # Документация
+│   ├── QUICK_START.md      # Быстрый старт
+│   ├── PIPELINE_GUIDE.md   # Гайд по пайплайнам
+│   └── FINANCIAL_QUICKSTART.md  # Для финансистов
+├── scripts/
+│   ├── processors/         # Обработка данных
+│   │   ├── docling_processor.py    # PDF/DOCX → Markdown
+│   │   └── crawler_crawl4ai.py     # Веб-краулер
+│   ├── analytics/          # Аналитика
+│   │   └── duckdb_analytics.py     # Работа с данными
+│   ├── finance/            # Финансы (ОСВ)
+│   │   ├── import_osv_improved.py  # Импорт ОСВ
+│   │   ├── consolidated_report.py  # Сводный отчет
+│   │   └── README.md               # Документация
+│   └── examples/           # Примеры использования
+│       ├── test_pipeline_full.py   # Полный пайплайн
+│       └── test_duckdb_examples.py # Примеры DuckDB
+├── config/
+│   ├── s3_config.py        # Настройки S3 (Beget)
+│   └── sources.yaml        # Источники данных
+└── knowledge_base/
+    └── duckdb/             # Локальные данные для аналитики
+        └── osv/            # ОСВ данные
 ```
-🔍 Найдено результатов: 5
-
-1. [Document Title] (0.847) ⭐
-   Текст: OpenSPG is a knowledge graph engine...
-
-2. [Another Doc] (0.782)
-   ...
-```
-
-## 🧪 Что нового
-
-**v3.0 - Lite Pipeline** (текущая версия):
-- ✅ SQLite для быстрых экспериментов
-- ✅ Локальные embeddings без API ключей
-- ✅ Chunking + векторный поиск работает
-- ✅ Протестировано на OpenSPG документации
-
-**v2.0 - Production Stack**:
-- ✅ PostgreSQL 18 + pgvector
-- ✅ ChromaDB + Prefect + FastAPI
-- ✅ Docker Compose с 6 сервисами
-- ✅ Полная документация и деплой скрипты
 
 ## 🚀 Быстрый старт
 
 ### Установка
 
-**Автоматическая (рекомендуется)**:
-```powershell
-# Windows PowerShell
-.\setup.ps1
-
-# Linux/Mac
-chmod +x setup.sh && ./setup.sh
-```
-
-**Ручная установка**:
 ```bash
-# Создать виртуальное окружение
-python -m venv .venv
-.venv\Scripts\Activate.ps1  # Windows
+# Клонирование
+git clone https://github.com/leval907/docagent.git /opt/docagent
+cd /opt/docagent
 
-# Установить зависимости
-pip install -r requirements.txt
+# Создание виртуального окружения
+python3 -m venv venv
+source venv/bin/activate
 
-# Установить браузеры для Playwright
-playwright install
-```
-cd ../..
-
-# Установить зависимости DocAgent
-pip install -r requirements.txt
+# Установка зависимостей
+pip install docling crawl4ai duckdb boto3 playwright sentence-transformers
+playwright install chromium --with-deps
 ```
 
-### Базовое использование
+### Настройка PostgreSQL
 
 ```bash
-# Сбор документации (с JavaScript support)
-python scripts/crawler_crawl4ai.py --app nocodb
-
-# Обработка и добавление метаданных (если нужно)
-python scripts/postprocess.py --app nocodb
-
-# Создание индекса
-python scripts/build_index.py --app nocodb
+# Запуск контейнера с pgvector
+docker run -d \
+  --name postgres-docagent \
+  -e POSTGRES_DB=docagent \
+  -e POSTGRES_USER=docagent \
+  -e POSTGRES_PASSWORD=docagent123 \
+  -p 5432:5432 \
+  pgvector/pgvector:pg16
 ```
 
+### Настройка S3 (Beget Cloud)
 
-## 📁 Структура проекта
-
-```
-DocAgent/
-├── scripts/
-│   ├── pipeline_lite.py       # 🧪 Lite: SQLite + embeddings + search ⭐
-│   ├── crawl_and_clean.py     # 🏢 Production: Full pipeline с S3
-│   ├── crawler_crawl4ai.py    # Базовый crawler с Crawl4AI
-│   └── test_*.py              # Тесты
-├── api/
-│   └── main.py                # 🏢 FastAPI REST API
-├── workflows/
-│   └── prefect_flows.py       # 🏢 Prefect orchestration
-├── config/
-│   └── sources.yaml           # Конфигурация источников
-├── knowledge_base/
-│   └── {app}/                 # Markdown файлы по приложениям
-├── QUICKSTART_LITE.md         # 🧪 Quick start для экспериментов
-├── LITE_PIPELINE.md           # 🧪 Детальная документация Lite
-├── COMPLETE_STACK.md          # 🏢 Production stack guide
-├── DOCKER_SETUP.md            # 🏢 Docker конфигурация
-└── requirements.txt           # Python dependencies
+Отредактируй `config/s3_config.py`:
+```python
+S3_BUCKET = "твой-bucket"
+S3_ACCESS_KEY = "твой-access-key"
+S3_SECRET_KEY = "твой-secret-key"
+S3_ENDPOINT = "https://s3.ru1.storage.beget.cloud"
 ```
 
-## 🔧 Использование
+## 💼 Примеры использования
 
-### Lite Mode (для экспериментов)
+### 1. Обработка финансового отчета
 
-```bash
-# Загрузка документа
-python scripts/pipeline_lite.py load document.md --app myapp
+```python
+from scripts.processors.docling_processor import DoclingProcessor
 
-# Поиск
-python scripts/pipeline_lite.py search "your query" --limit 10
+processor = DoclingProcessor()
 
-# Статистика
-python scripts/pipeline_lite.py stats
+# Обработать PDF отчет
+markdown_content = processor.process_file(
+    "financial_report_2024.pdf",
+    app_name="client-reports"
+)
+
+# Файл автоматически загружен в S3:
+# - raw/client-reports/financial_report_2024.pdf
+# - processed/client-reports/financial_report_2024.md
+# - metadata/client-reports/financial_report_2024.json
 ```
 
-### Production Mode (полный стек)
+### 2. Сбор данных с сайта компании
 
-```bash
-# Docker Compose
-docker network create ducem-net
-docker compose up -d
+```python
+from scripts.processors.crawler_crawl4ai import crawl_website
 
-# Краулинг + обработка
-python scripts/crawl_and_clean.py --app openspg \
-  --s3-bucket your-bucket \
-  --s3-endpoint https://s3.endpoint.com
+# Собрать информацию о компании
+results = await crawl_website(
+    start_url="https://company.com",
+    max_pages=10,
+    app_name="competitor-analysis"
+)
 
-# API доступ
-curl http://localhost:8080/search -d '{"query": "text"}'
+# Результаты в S3: crawled/competitor-analysis/
 ```
 
-## 📊 Примеры результатов
+### 3. Анализ данных из Excel
 
-### Lite Pipeline (SQLite)
+```python
+from scripts.analytics.duckdb_analytics import DuckDBAnalytics
+
+analytics = DuckDBAnalytics()
+
+# Импорт Excel файлов
+analytics.import_excel("sales_2024.xlsx")
+analytics.import_excel("clients_database.xlsx")
+
+# Автоматический поиск связей
+relationships = analytics.analyze_relationships()
+
+# SQL-запрос к данным
+result = analytics.query("""
+    SELECT 
+        clients.company_name,
+        SUM(sales.amount) as total_revenue,
+        COUNT(sales.id) as deals_count
+    FROM sales 
+    JOIN clients ON sales.client_id = clients.id
+    GROUP BY clients.company_name
+    ORDER BY total_revenue DESC
+""")
+
+# Экспорт результата
+analytics.export_to_excel(result, "revenue_analysis.xlsx")
+```
+
+### 4. Полный пайплайн
+
+```python
+# См. scripts/examples/test_pipeline_full.py
+
+# 1. Краулинг → S3
+# 2. Docling обработка → S3
+# 3. Импорт в DuckDB
+# 4. Генерация эмбеддингов
+# 5. Сохранение в PostgreSQL
+# 6. Построение графа в ArangoDB
+```
+
+## 🔧 Технологический стек
+
+- **Python 3.12**
+- **Docling 2.61.2** - обработка документов
+- **Crawl4AI 0.7.6** - веб-краулинг
+- **DuckDB 1.4.1** - OLAP аналитика
+- **PostgreSQL 16 + pgvector** - векторная БД
+- **ArangoDB** - граф БД (планируется)
+- **S3 Beget** - облачное хранилище
+- **sentence-transformers** - эмбеддинги
+
+## 📊 Архитектура данных
 
 ```
-📊 Статистика
-Документов: 5
-Chunks: 10
-Приложения: openspg (5 docs, 3091 words)
-
-🔍 Поиск: "knowledge graph"
-1. [Schema Guide] (0.847) - высокая релевантность
-2. [Tutorial] (0.782) - хорошее совпадение
-3. [Concepts] (0.691) - релевантно
+Источники → Обработка → Хранилище → Аналитика
+   ↓            ↓            ↓           ↓
+PDF/DOCX    Docling      S3 (raw)    DuckDB
+Веб-сайты   Crawl4AI     S3 (proc)   PostgreSQL
+Excel/CSV   Python       S3 (meta)   ArangoDB
 ```
 
-### Production Stack
+## 📖 Документация
 
-```json
-GET /stats/analytics
-{
-  "total_documents": 127,
-  "total_chunks": 1534,
-  "apps": [
-    {"app_id": "openspg", "documents": 24, "words": 16408},
-    {"app_id": "nocodb", "documents": 50, "words": 26988},
-    {"app_id": "dbgpt", "documents": 53, "words": 34512}
-  ]
-}
-```
+- [Быстрый старт](docs/QUICK_START.md)
+- [Гайд по Docling](docs/DOCLING_INTEGRATION.md)
+- [Гайд по Crawl4AI](docs/CRAWL4AI_GUIDE.md)
+- [Работа с DuckDB](docs/DUCKDB_INTEGRATION.md)
+- [Архитектура пайплайнов](docs/PIPELINE_GUIDE.md)
 
+## 🤝 Поддержка
 
-## � Документация
+Для вопросов и предложений: [создайте issue](https://github.com/leval907/docagent/issues)
 
-### 🧪 Для экспериментов (начните отсюда)
-- **[QUICKSTART_LITE.md](./QUICKSTART_LITE.md)** - Быстрый старт за 3 минуты
-- **[LITE_PIPELINE.md](./LITE_PIPELINE.md)** - Полное руководство по Lite режиму
-- **[scripts/pipeline_lite.py](./scripts/pipeline_lite.py)** - Исходный код
+## 📄 Лицензия
 
-### 🏢 Для production
-- **[COMPLETE_STACK.md](./COMPLETE_STACK.md)** - Полный production stack
-- **[DOCKER_SETUP.md](./DOCKER_SETUP.md)** - Docker конфигурация
-- **[SERVER_DEPLOYMENT.md](./SERVER_DEPLOYMENT.md)** - Деплой на сервер
+MIT License - см. [LICENSE](LICENSE)
 
-### 📖 Дополнительно
-- **[CRAWL4AI_GUIDE.md](./CRAWL4AI_GUIDE.md)** - Crawl4AI integration
-- **[PIPELINE_GUIDE.md](./PIPELINE_GUIDE.md)** - Детали pipeline
-- **[config/sources.yaml](./config/sources.yaml)** - Конфигурация источников
+---
 
-## 🛠️ Roadmap
+**Создано для финансовых консультантов, работающих с данными** 💼📈
 
-### ✅ Completed
-- [x] Crawl4AI integration с JavaScript support
-- [x] SQLite lite pipeline для экспериментов
-- [x] Chunking + embeddings + vector search
-- [x] PostgreSQL 18 + pgvector
-- [x] ChromaDB integration
-- [x] Prefect workflows
-- [x] FastAPI REST API
-- [x] S3 storage (Beget, AWS, MinIO)
-- [x] Docker Compose stack
+## Documentation
 
-### 🔄 In Progress
-- [ ] FAISS индексы для быстрого поиска
-- [ ] Гибридный поиск (BM25 + Vector)
-- [ ] Reranking с cross-encoder
+- [Quick Start](docs/QUICK_START.md)
+- [Architecture](docs/COMPLETE_STACK.md)
+- [Crawl4AI Guide](docs/CRAWL4AI_GUIDE.md)
+- [Pipeline Guide](docs/PIPELINE_GUIDE.md)
 
-### 📋 Planned
-- [ ] n8n workflow integration
-- [ ] Flowise connector
-- [ ] OpenSPG knowledge graph integration
-- [ ] Grafana dashboards
-- [ ] API authentication (JWT)
+## Use Cases
 
-## 🤝 Contributing
+1. **Documentation Hub** - Centralize technical documentation
+2. **Data Integration** - Analyze heterogeneous datasets
+3. **Knowledge Graph** - Build relationships between data
+4. **Semantic Search** - Smart search across knowledge base
 
-Pull requests приветствуются! См. [CONTRIBUTING.md](./CONTRIBUTING.md)
+## Technology Stack
 
-1. Fork проекта
-2. Создайте feature branch (`git checkout -b feature/amazing`)
-3. Commit изменений (`git commit -m 'Add amazing feature'`)
-4. Push в branch (`git push origin feature/amazing`)
-5. Откройте Pull Request
+- **Storage**: S3 (Beget), PostgreSQL + pgvector
+- **Analytics**: DuckDB
+- **Graph**: ArangoDB
+- **Processing**: Docling, Crawl4AI
+- **Automation**: Prefect
+- **API**: FastAPI
 
-## 📝 Лицензия
+## License
 
-MIT
+See [LICENSE](LICENSE)
