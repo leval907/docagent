@@ -48,6 +48,8 @@ botocore
 sentence-transformers
 psycopg2-binary
 pgvector
+langchain-text-splitters
+langchain-community
 
 # === API (опционально) ===
 fastapi
