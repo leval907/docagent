@@ -52,6 +52,14 @@
 
 **Применение:** Анализ бенефициаров, поиск скрытых связей
 
+### 6. **Semantic Layer** (Cube.js) 🆕
+- Единая модель данных поверх PostgreSQL
+- SQL API (Postgres Proxy) для BI-инструментов
+- Автоматическая агрегация и кэширование
+- Dev Playground для моделирования метрик
+
+**Применение:** Подключение DataLens/Metabase, дашборды, консолидированная отчётность
+
 Enterprise-grade platform for document processing, web intelligence, and data analytics.
 
 ## Features
@@ -61,6 +69,7 @@ Enterprise-grade platform for document processing, web intelligence, and data an
 - 📊 **Data Analytics**: Excel, CSV, JSON analysis with DuckDB
 - 🔍 **Semantic Search**: Vector-based search with PostgreSQL + pgvector
 - 🕸️ **Knowledge Graph**: ArangoDB graph database
+- 📈 **Semantic Layer**: Cube.js for BI tools (DataLens, Metabase)
 - ⚡ **Workflow Automation**: Prefect orchestration
 - 🔗 **REST API**: FastAPI endpoints
 
@@ -71,7 +80,8 @@ docagent/
 ├── docs/                    # Документация
 │   ├── QUICK_START.md      # Быстрый старт
 │   ├── PIPELINE_GUIDE.md   # Гайд по пайплайнам
-│   └── FINANCIAL_QUICKSTART.md  # Для финансистов
+│   ├── FINANCIAL_QUICKSTART.md  # Для финансистов
+│   └── CUBE_ANALYTICS.md   # Cube.js semantic layer 🆕
 ├── scripts/
 │   ├── processors/         # Обработка данных
 │   │   ├── docling_processor.py    # PDF/DOCX → Markdown
@@ -88,6 +98,9 @@ docagent/
 ├── config/
 │   ├── s3_config.py        # Настройки S3 (Beget)
 │   └── sources.yaml        # Источники данных
+├── mycube-docker/          # Cube.js конфигурация 🆕
+│   ├── model/              # Data models (кубы, измерения)
+│   └── .cubestore/         # Внутреннее хранилище Cube
 └── knowledge_base/
     └── duckdb/             # Локальные данные для аналитики
         └── osv/            # ОСВ данные
@@ -227,11 +240,11 @@ analytics.export_to_excel(result, "revenue_analysis.xlsx")
 ## 📊 Архитектура данных
 
 ```
-Источники → Обработка → Хранилище → Аналитика
-   ↓            ↓            ↓           ↓
-PDF/DOCX    Docling      S3 (raw)    DuckDB
-Веб-сайты   Crawl4AI     S3 (proc)   PostgreSQL
-Excel/CSV   Python       S3 (meta)   ArangoDB
+Источники → Обработка → Хранилище → Аналитика → BI
+   ↓            ↓            ↓           ↓        ↓
+PDF/DOCX    Docling      S3 (raw)    DuckDB   Cube.js
+Веб-сайты   Crawl4AI     S3 (proc)   PostgreSQL  ↓
+Excel/CSV   Python       S3 (meta)   ArangoDB  DataLens
 ```
 
 ## 📖 Документация
@@ -241,6 +254,7 @@ Excel/CSV   Python       S3 (meta)   ArangoDB
 - [Гайд по Crawl4AI](docs/CRAWL4AI_GUIDE.md)
 - [Работа с DuckDB](docs/DUCKDB_INTEGRATION.md)
 - [Архитектура пайплайнов](docs/PIPELINE_GUIDE.md)
+- [Cube.js Analytics](docs/CUBE_ANALYTICS.md) 🆕
 
 ## 🤝 Поддержка
 
@@ -257,7 +271,7 @@ MIT License - см. [LICENSE](LICENSE)
 ## Documentation
 
 - [Quick Start](docs/QUICK_START.md)
-- [Architecture](docs/COMPLETE_STACK.md)
+- [System Architecture](SYSTEM_ARCHITECTURE.md)
 - [Crawl4AI Guide](docs/CRAWL4AI_GUIDE.md)
 - [Pipeline Guide](docs/PIPELINE_GUIDE.md)
 
@@ -271,7 +285,7 @@ MIT License - см. [LICENSE](LICENSE)
 ## Technology Stack
 
 - **Storage**: S3 (Beget), PostgreSQL + pgvector
-- **Analytics**: DuckDB
+- **Analytics**: DuckDB, Cube.js (semantic layer)
 - **Graph**: ArangoDB
 - **Processing**: Docling, Crawl4AI
 - **Automation**: Prefect
