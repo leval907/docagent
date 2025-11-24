@@ -60,6 +60,14 @@
 
 **Применение:** Подключение DataLens/Metabase, дашборды, консолидированная отчётность
 
+### 7. **Agentic Workflows** (LangGraph) 🆕
+- Оркестрация сложных агентов
+- Управление состоянием и памятью
+- Циклические графы выполнения
+- Интеграция с LangChain и GigaChat
+
+**Применение:** Создание автономных финансовых агентов, сложные цепочки рассуждений
+
 Enterprise-grade platform for document processing, web intelligence, and data analytics.
 
 ## Features
@@ -70,6 +78,7 @@ Enterprise-grade platform for document processing, web intelligence, and data an
 - 🔍 **Semantic Search**: Vector-based search with PostgreSQL + pgvector
 - 🕸️ **Knowledge Graph**: ArangoDB graph database
 - 📈 **Semantic Layer**: Cube.js for BI tools (DataLens, Metabase)
+- 🤖 **Agentic Workflows**: LangGraph for complex agent orchestration
 - ⚡ **Workflow Automation**: Prefect orchestration
 - 🔗 **REST API**: FastAPI endpoints
 
@@ -234,6 +243,8 @@ analytics.export_to_excel(result, "revenue_analysis.xlsx")
 - **DuckDB 1.4.1** - OLAP аналитика
 - **PostgreSQL 16 + pgvector** - векторная БД
 - **ArangoDB** - граф БД (планируется)
+- **LangGraph** - оркестрация агентов
+- **GigaChat** - LLM для генерации текста
 - **S3 Beget** - облачное хранилище
 - **sentence-transformers** - эмбеддинги
 

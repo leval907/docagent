@@ -51,6 +51,12 @@ pgvector
 langchain-text-splitters
 langchain-community
 
+# === Агенты и оркестрация ===
+langgraph
+langchain
+langchain-community
+gigachat
+
 # === API (опционально) ===
 fastapi
 uvicorn
