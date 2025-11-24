@@ -59,3 +59,224 @@ python scripts/finance/get_profit_from_OSV.py COMPANY_CODE
   "Revenue": 1000.0
 }
 ```
+
+---
+
+## 📋 Практическое руководство по использованию агента
+
+### Шаг 1: Подготовка окружения
+
+Убедитесь, что установлены необходимые зависимости:
+
+```bash
+cd /opt/docagent
+pip3 install psycopg2-binary python-dotenv langchain langchain-community langgraph --break-system-packages
+```
+
+### Шаг 2: Проверка конфигурации
+
+Проверьте `.env` файл на наличие GigaChat credentials:
+
+```bash
+cat .env | grep GIGACHAT
+```
+
+Должно быть:
+```
+GIGACHAT_CREDENTIALS=ваш_токен
+GIGACHAT_SCOPE=GIGACHAT_API_PERS
+GIGACHAT_VERIFY_SSL_CERTS=False
+```
+
+### Шаг 3: Проверка доступных компаний
+
+Посмотрите список компаний в базе данных:
+
+```bash
+PGPASSWORD=analytics_secure_2025 psql -h localhost -U analytics_user -d analytics -c \
+"SELECT id, company_code, company_name FROM master.companies ORDER BY company_name LIMIT 10;"
+```
+
+**Пример вывода:**
+```
+ id | company_code  |   company_name    
+----+---------------+-------------------
+  1 | DZhUL_LAIF    | ДЖУЛ ЛАЙФ ООО
+  3 | VAITERA       | ВАЙТЕРА ООО
+  5 | GROSS_GRUP_DI | ГРОСС ГРУП ДИ ООО
+  6 | GLOBALKONSALT | ГЛОБАЛКОНСАЛТ ООО
+  8 | PARTNER       | ПАРТНЕР ООО
+```
+
+### Шаг 4: Запуск агента
+
+Агент можно запустить **тремя способами**:
+
+#### Вариант 1: По коду компании
+```bash
+python3 scripts/finance/get_profit_from_OSV.py "GROSS_GRUP_DI"
+```
+
+#### Вариант 2: По названию компании
+```bash
+python3 scripts/finance/get_profit_from_OSV.py "ГРОСС ГРУП ДИ ООО"
+```
+
+#### Вариант 3: По ID компании
+```bash
+python3 scripts/finance/get_profit_from_OSV.py "5"
+```
+
+### Шаг 5: Что происходит при запуске
+
+Агент выполняет следующие действия:
+
+1. **Поиск компании** в `master.companies`
+   ```
+   Starting agent for: GROSS_GRUP_DI
+   Found company: ГРОСС ГРУП ДИ ООО (ID: 5)
+   ```
+
+2. **Загрузка ОСВ данных** из `history.osv_detail`
+   ```
+   Loading OSV data for company_id=5...
+   Found 150 OSV records
+   ```
+
+3. **Отправка запроса в GigaChat**
+   ```
+   Sending request to GigaChat...
+   Analyzing 150 account records...
+   ```
+
+4. **Получение и парсинг ответа**
+   ```
+   Raw response from GigaChat:
+   {
+     "Revenue": 150000000.50,
+     "Cost of Goods": 80000000.25,
+     "Overheads": 11679065.65,
+     ...
+   }
+   ```
+
+5. **Сохранение результатов**
+   - В таблицу `analytics.profit_v`
+   - В лог-файл `gigachat.log`
+
+### Шаг 6: Проверка результатов
+
+#### Посмотреть в базе данных:
+```bash
+PGPASSWORD=analytics_secure_2025 psql -h localhost -U analytics_user -d analytics -c \
+"SELECT company_id, revenue, cost_of_goods, overheads, created_at 
+ FROM analytics.profit_v 
+ WHERE company_id = 5 
+ ORDER BY created_at DESC 
+ LIMIT 1;"
+```
+
+#### Посмотреть лог GigaChat:
+```bash
+tail -100 gigachat.log
+```
+
+### Шаг 7: Пакетная обработка
+
+Для обработки нескольких компаний создайте скрипт:
+
+```bash
+#!/bin/bash
+# process_all_companies.sh
+
+companies=(
+    "GROSS_GRUP_DI"
+    "VAITERA"
+    "PARTNER"
+    "GLOBALKONSALT"
+)
+
+for company in "${companies[@]}"; do
+    echo "Processing $company..."
+    python3 scripts/finance/get_profit_from_OSV.py "$company"
+    sleep 5  # Пауза между запросами к GigaChat
+done
+```
+
+Запуск:
+```bash
+chmod +x process_all_companies.sh
+./process_all_companies.sh
+```
+
+---
+
+## 🔍 Troubleshooting (Решение проблем)
+
+### Проблема: "ModuleNotFoundError: No module named 'psycopg2'"
+
+**Решение:**
+```bash
+pip3 install psycopg2-binary --break-system-packages
+```
+
+### Проблема: "Company not found"
+
+**Решение:**
+Проверьте точное название компании в базе:
+```bash
+PGPASSWORD=analytics_secure_2025 psql -h localhost -U analytics_user -d analytics -c \
+"SELECT company_code, company_name FROM master.companies WHERE company_name ILIKE '%поиск%';"
+```
+
+### Проблема: "No OSV data found"
+
+**Решение:**
+Проверьте наличие данных ОСВ для компании:
+```bash
+PGPASSWORD=analytics_secure_2025 psql -h localhost -U analytics_user -d analytics -c \
+"SELECT COUNT(*) FROM history.osv_detail WHERE company_id = 5;"
+```
+
+Если данных нет, нужно импортировать ОСВ файлы через ETL пайплайн.
+
+### Проблема: "GigaChat API error"
+
+**Решение:**
+1. Проверьте токен в `.env`
+2. Проверьте интернет-соединение
+3. Проверьте лимиты API GigaChat
+
+---
+
+## 📊 Структура результата
+
+После успешной обработки в таблице `analytics.profit_v` появится запись:
+
+```sql
+SELECT * FROM analytics.profit_v WHERE company_id = 5 ORDER BY created_at DESC LIMIT 1;
+```
+
+**Поля таблицы:**
+- `id` - Уникальный ID записи
+- `company_id` - ID компании (FK → master.companies)
+- `revenue` - Выручка
+- `cost_of_goods` - Себестоимость
+- `overheads` - Накладные расходы
+- `leasing` - Лизинговые платежи
+- `extraordinary_income_expenses` - Прочие доходы/расходы
+- `interest_paid` - Проценты к уплате
+- `depreciation_amortisation` - Амортизация
+- `tax_paid` - Налоги
+- `dividends_paid` - Дивиденды
+- `llm_response_json` - Полный ответ от GigaChat (JSON)
+- `created_at` - Время создания записи
+
+---
+
+## 🎯 Следующие шаги
+
+1. **Анализ результатов** через SQL запросы
+2. **Визуализация** в DataLens или другом BI инструменте
+3. **Автоматизация** через cron или Prefect
+4. **Расширение агента** для других типов отчетов
