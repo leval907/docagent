@@ -48,15 +48,59 @@ model/financial/
 
 ```
 model/financial/
+├── ProfitAndLoss.js    # P&L отчеты (AI-generated от агента)
 ├── FinancialRatios.js  # 20+ финансовых коэффициентов
 ├── Consolidation.js    # Консолидация группы компаний
 ├── LiquidityAnalysis.js # Анализ ликвидности (A1-A4, P1-P4)
 └── ProfitabilityAnalysis.js # Анализ рентабельности
 ```
 
+### AI-Generated Models (🤖 от агентов)
+
+```
+model/financial/
+└── ProfitAndLoss.js    # P&L statements из GigaChat агента
+```
+
+**Связь с AI агентом:**
+- Агент `get_profit_from_OSV.py` анализирует ОСВ через GigaChat
+- Результаты сохраняются в `analytics.profit_v`
+- Cube.js модель предоставляет метрики: margins, EBITDA, profitability
+- См. [AGENT_CUBE_INTEGRATION.md](../docs/AGENT_CUBE_INTEGRATION.md)
+
 ## Готовые модели
 
-### 1. Accounts (План счетов)
+### 1. ProfitAndLoss (🤖 AI-Generated)
+
+**Источник:** `analytics.profit_v` (создается агентом `get_profit_from_OSV.py`)
+
+**Measures:**
+- `totalRevenue` - Общая выручка
+- `grossProfit` - Валовая прибыль
+- `grossProfitMargin` - Валовая маржа %
+- `operatingProfit` - Операционная прибыль (EBIT)
+- `netProfit` - Чистая прибыль
+- `netMargin` - Чистая маржа %
+- `ebitda` - EBITDA
+- `ebitdaMargin` - EBITDA маржа %
+
+**Segments:**
+- `profitable` - Прибыльные компании
+- `highMargin` - Высокомаржинальные (> 30%)
+- `hasInterest` - С долговой нагрузкой
+- `paysDividends` - Выплачивают дивиденды
+
+**Пример запроса:**
+```javascript
+{
+  "measures": ["ProfitAndLoss.totalRevenue", "ProfitAndLoss.netMargin"],
+  "dimensions": ["ProfitAndLoss.companyName"],
+  "segments": ["ProfitAndLoss.profitable"],
+  "order": {"ProfitAndLoss.totalRevenue": "desc"}
+}
+```
+
+### 2. Accounts (План счетов)
 
 **Dimensions:**
 - `accountCode` - Код счета (01, 60.01, 62.02)
