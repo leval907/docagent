@@ -1,0 +1,289 @@
+# ============================================================================
+# CUBE SCHEMA: Справочник счетов (Chart of Accounts)
+# ============================================================================
+# Описание: Базовая семантическая модель для российского Плана счетов
+# Использование: Основа для всех финансовых методик и анализа
+# ============================================================================
+
+cubes:
+  - name: Accounts
+    sql: >
+      SELECT 
+        account_code,
+        account_name,
+        account_level,
+        parent_code,
+        subconto1,
+        subconto2,
+        subconto3,
+        rsbu_type,
+        account_type,
+        balance_flag,
+        pnl_flag,
+        liquidity_group,
+        maturity_group,
+        wc_role,
+        balance_mgmt_group,
+        balance_equation_class
+      FROM chart_of_accounts
+    
+    title: "План счетов"
+    description: >
+      Российский План счетов бухгалтерского учета с классификацией 
+      по типам, уровням аналитики и балансовым признакам.
+    
+    # ========================================================================
+    # DIMENSIONS (Измерения)
+    # ========================================================================
+    dimensions:
+      # Основные атрибуты счета
+      - name: accountCode
+        sql: account_code
+        type: string
+        title: "Код счета"
+        description: "Код счета по российскому плану счетов (например: 60.01, 62.02)"
+        primaryKey: true
+      
+      - name: accountName
+        sql: account_name
+        type: string
+        title: "Наименование счета"
+        description: "Полное наименование счета"
+      
+      - name: accountLevel
+        sql: account_level
+        type: number
+        title: "Уровень иерархии"
+        description: "0 - счет первого порядка, 1 - субсчет"
+      
+      - name: parentCode
+        sql: parent_code
+        type: string
+        title: "Родительский счет"
+        description: "Код счета верхнего уровня в иерархии"
+      
+      # Аналитические измерения (субконто)
+      - name: subconto1
+        sql: subconto1
+        type: string
+        title: "Субконто 1"
+        description: "Первый уровень аналитики (например: Контрагенты, Номенклатура)"
+      
+      - name: subconto2
+        sql: subconto2
+        type: string
+        title: "Субконто 2"
+        description: "Второй уровень аналитики (например: Договоры)"
+      
+      - name: subconto3
+        sql: subconto3
+        type: string
+        title: "Субконто 3"
+        description: "Третий уровень аналитики (например: Партии)"
+      
+      # Классификация по РСБУ
+      - name: rsbuType
+        sql: rsbu_type
+        type: string
+        title: "Тип счета РСБУ"
+        description: "А - активный, П - пассивный, АП - активно-пассивный"
+        meta:
+          ai_description: |
+            Определяет природу счета:
+            - А (Активный): Имущество и права организации (увеличение по дебету)
+            - П (Пассивный): Источники формирования имущества (увеличение по кредиту)
+            - АП (Активно-пассивный): Может иметь как дебетовое, так и кредитовое сальдо
+      
+      - name: accountType
+        sql: account_type
+        type: string
+        title: "Тип счета"
+        description: "ASSET, LIABILITY, EQUITY, REVENUE, EXPENSE, OTHER"
+      
+      # Балансовые признаки
+      - name: balanceFlag
+        sql: balance_flag
+        type: boolean
+        title: "Балансовый счет"
+        description: "true - входит в баланс, false - забалансовый или результативный"
+      
+      - name: pnlFlag
+        sql: pnl_flag
+        type: boolean
+        title: "Счет прибылей и убытков"
+        description: "true - входит в отчет о финансовых результатах"
+      
+      # Классификация для финансового анализа
+      - name: balanceMgmtGroup
+        sql: balance_mgmt_group
+        type: string
+        title: "Группа управленческого баланса"
+        description: "AR, AP, CASH, INVENTORY, DEBT_SHORT, DEBT_LONG, EQUITY, etc."
+        meta:
+          ai_description: |
+            Группировка для управленческой отчетности:
+            - AR: Дебиторская задолженность (Accounts Receivable)
+            - AP: Кредиторская задолженность (Accounts Payable)
+            - CASH: Денежные средства
+            - INVENTORY: Запасы
+            - DEBT_SHORT: Краткосрочные займы
+            - DEBT_LONG: Долгосрочные займы
+            - EQUITY: Собственный капитал
+            - NCA_OPERATING: Внеоборотные операционные активы
+            - OTHER: Прочие счета
+      
+      - name: balanceEquationClass
+        sql: balance_equation_class
+        type: string
+        title: "Класс балансового уравнения"
+        description: "OPERATING_ASSETS, OPERATING_LIABILITIES, NET_DEBT, EQUITY, NON_OPERATING"
+      
+      - name: liquidityGroup
+        sql: liquidity_group
+        type: string
+        title: "Группа ликвидности"
+        description: "A1 (наиболее ликвидные), A2, A3, A4 (труднореализуемые)"
+        meta:
+          ai_description: |
+            Классификация активов по степени ликвидности:
+            - A1: Наиболее ликвидные (денежные средства)
+            - A2: Быстрореализуемые (дебиторская задолженность < 12 мес)
+            - A3: Медленнореализуемые (запасы, НДС)
+            - A4: Труднореализуемые (внеоборотные активы)
+      
+      - name: wcRole
+        sql: wc_role
+        type: string
+        title: "Роль в оборотном капитале"
+        description: "CA (Current Assets), CL (Current Liabilities), OTHER"
+    
+    # ========================================================================
+    # MEASURES (Метрики)
+    # ========================================================================
+    measures:
+      # Счетчики
+      - name: accountCount
+        type: count
+        title: "Количество счетов"
+        description: "Общее количество счетов"
+      
+      - name: balanceAccountCount
+        type: count
+        filters:
+          - sql: ${balanceFlag} = true
+        title: "Балансовых счетов"
+        description: "Количество счетов, входящих в баланс"
+      
+      - name: pnlAccountCount
+        type: count
+        filters:
+          - sql: ${pnlFlag} = true
+        title: "Счетов ОФР"
+        description: "Количество счетов отчета о финансовых результатах"
+      
+      # Статистика по аналитикам
+      - name: accountsWithAnalytics1
+        type: count
+        filters:
+          - sql: ${subconto1} IS NOT NULL
+        title: "Счетов с аналитикой 1"
+        description: "Счета с первым уровнем аналитики"
+      
+      - name: accountsWithAnalytics2
+        type: count
+        filters:
+          - sql: ${subconto2} IS NOT NULL
+        title: "Счетов с аналитикой 2"
+        description: "Счета со вторым уровнем аналитики"
+      
+      - name: accountsWithAnalytics3
+        type: count
+        filters:
+          - sql: ${subconto3} IS NOT NULL
+        title: "Счетов с аналитикой 3"
+        description: "Счета с третьим уровнем аналитики"
+    
+    # ========================================================================
+    # SEGMENTS (Предопределенные сегменты для частых запросов)
+    # ========================================================================
+    segments:
+      # Активы и пассивы
+      - name: activeAccounts
+        sql: ${rsbuType} = 'А'
+        title: "Активные счета"
+        description: "Счета учета имущества и прав (дебетовое сальдо)"
+      
+      - name: passiveAccounts
+        sql: ${rsbuType} = 'П'
+        title: "Пассивные счета"
+        description: "Счета учета источников (кредитовое сальдо)"
+      
+      - name: activePassiveAccounts
+        sql: ${rsbuType} = 'АП'
+        title: "Активно-пассивные счета"
+        description: "Счета с переменным сальдо"
+      
+      # Балансовые группы
+      - name: currentAssets
+        sql: ${wcRole} = 'CA'
+        title: "Оборотные активы"
+        description: "Активы со сроком обращения до 12 месяцев"
+      
+      - name: currentLiabilities
+        sql: ${wcRole} = 'CL'
+        title: "Краткосрочные обязательства"
+        description: "Обязательства со сроком погашения до 12 месяцев"
+      
+      # Специфичные группы для анализа
+      - name: cashAccounts
+        sql: ${balanceMgmtGroup} = 'CASH'
+        title: "Денежные средства"
+        description: "Счета учета наличных и безналичных денег"
+      
+      - name: receivablesAccounts
+        sql: ${balanceMgmtGroup} = 'AR'
+        title: "Дебиторская задолженность"
+        description: "Счета расчетов с покупателями и прочими дебиторами"
+      
+      - name: payablesAccounts
+        sql: ${balanceMgmtGroup} = 'AP'
+        title: "Кредиторская задолженность"
+        description: "Счета расчетов с поставщиками и прочими кредиторами"
+      
+      - name: inventoryAccounts
+        sql: ${balanceMgmtGroup} = 'INVENTORY'
+        title: "Запасы"
+        description: "Материалы, товары, готовая продукция"
+      
+      - name: debtAccounts
+        sql: ${balanceMgmtGroup} IN ('DEBT_SHORT', 'DEBT_LONG')
+        title: "Заемные средства"
+        description: "Кредиты и займы"
+      
+      - name: equityAccounts
+        sql: ${balanceMgmtGroup} = 'EQUITY'
+        title: "Собственный капитал"
+        description: "Уставный, резервный капитал, нераспределенная прибыль"
+    
+    # ========================================================================
+    # PRE-AGGREGATIONS (Предварительные агрегации для ускорения)
+    # ========================================================================
+    preAggregations:
+      - name: accountsByType
+        measures:
+          - accountCount
+        dimensions:
+          - rsbuType
+          - accountType
+          - balanceMgmtGroup
+        refreshKey:
+          every: 24 hours
+      
+      - name: accountsHierarchy
+        dimensions:
+          - accountCode
+          - accountName
+          - parentCode
+          - accountLevel
+        refreshKey:
+          every: 24 hours

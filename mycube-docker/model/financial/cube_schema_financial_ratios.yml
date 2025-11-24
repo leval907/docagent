@@ -1,0 +1,719 @@
+# ============================================================================
+# CUBE SCHEMA: Финансовые коэффициенты (Financial Ratios)
+# ============================================================================
+# Описание: Коэффициентный анализ ликвидности, рентабельности, оборачиваемости
+# Использование: Экспресс-анализ финансового состояния компании
+# ============================================================================
+
+cubes:
+  - name: FinancialRatios
+    sql: >
+      WITH balance_aggregates AS (
+        SELECT 
+          tb.company_id,
+          c.company_name,
+          c.group_id,
+          tb.period_date,
+          -- АКТИВЫ
+          SUM(CASE 
+            WHEN a.balance_mgmt_group = 'CASH' 
+            THEN tb.closing_debit_balance 
+            ELSE 0 
+          END) as cash,
+          SUM(CASE 
+            WHEN a.balance_mgmt_group = 'AR' 
+            THEN tb.closing_debit_balance - tb.closing_credit_balance
+            ELSE 0 
+          END) as accounts_receivable,
+          SUM(CASE 
+            WHEN a.balance_mgmt_group = 'INVENTORY' 
+            THEN tb.closing_debit_balance 
+            ELSE 0 
+          END) as inventory,
+          SUM(CASE 
+            WHEN a.balance_mgmt_group IN ('CASH', 'AR', 'INVENTORY') 
+            THEN tb.closing_debit_balance - tb.closing_credit_balance
+            ELSE 0 
+          END) as current_assets,
+          SUM(CASE 
+            WHEN a.balance_mgmt_group = 'NCA_OPERATING' 
+            THEN tb.closing_debit_balance 
+            ELSE 0 
+          END) as fixed_assets,
+          SUM(CASE 
+            WHEN a.account_type = 'ASSET' 
+            THEN tb.closing_debit_balance - tb.closing_credit_balance
+            ELSE 0 
+          END) as total_assets,
+          -- ОБЯЗАТЕЛЬСТВА
+          SUM(CASE 
+            WHEN a.balance_mgmt_group = 'AP' 
+            THEN tb.closing_credit_balance - tb.closing_debit_balance
+            ELSE 0 
+          END) as accounts_payable,
+          SUM(CASE 
+            WHEN a.balance_mgmt_group = 'DEBT_SHORT' 
+            THEN tb.closing_credit_balance 
+            ELSE 0 
+          END) as short_term_debt,
+          SUM(CASE 
+            WHEN a.balance_mgmt_group IN ('AP', 'DEBT_SHORT') 
+            THEN tb.closing_credit_balance - tb.closing_debit_balance
+            ELSE 0 
+          END) as current_liabilities,
+          SUM(CASE 
+            WHEN a.balance_mgmt_group = 'DEBT_LONG' 
+            THEN tb.closing_credit_balance 
+            ELSE 0 
+          END) as long_term_debt,
+          SUM(CASE 
+            WHEN a.account_type IN ('LIABILITY', 'OTHER') AND a.rsbu_type = 'П'
+            THEN tb.closing_credit_balance - tb.closing_debit_balance
+            ELSE 0 
+          END) as total_liabilities,
+          -- КАПИТАЛ
+          SUM(CASE 
+            WHEN a.balance_mgmt_group = 'EQUITY' 
+            THEN tb.closing_credit_balance - tb.closing_debit_balance
+            ELSE 0 
+          END) as equity,
+          -- ВЫРУЧКА И ПРИБЫЛЬ (счета 90, 91, 99)
+          SUM(CASE 
+            WHEN a.account_code LIKE '90.01%'
+            THEN tb.credit_turnover 
+            ELSE 0 
+          END) as revenue,
+          SUM(CASE 
+            WHEN a.account_code LIKE '90.02%'
+            THEN tb.debit_turnover 
+            ELSE 0 
+          END) as cost_of_sales,
+          SUM(CASE 
+            WHEN a.account_code IN ('99', '99.01')
+            THEN tb.credit_turnover - tb.debit_turnover
+            ELSE 0 
+          END) as net_profit
+        FROM trial_balance tb
+        INNER JOIN companies c ON tb.company_id = c.company_id
+        INNER JOIN accounts a ON tb.account_id = a.account_id
+        WHERE tb.period_date >= '2024-01-01'
+        GROUP BY tb.company_id, c.company_name, c.group_id, tb.period_date
+      )
+      SELECT * FROM balance_aggregates
+    
+    title: "Финансовые коэффициенты"
+    description: >
+      Система финансовых показателей для комплексной оценки деятельности компании.
+      Включает коэффициенты ликвидности, рентабельности, оборачиваемости и финансовой устойчивости.
+    
+    # ========================================================================
+    # DIMENSIONS
+    # ========================================================================
+    dimensions:
+      - name: companyName
+        sql: company_name
+        type: string
+        title: "Компания"
+      
+      - name: groupId
+        sql: group_id
+        type: number
+        title: "Группа компаний"
+      
+      - name: periodDate
+        sql: period_date
+        type: time
+        title: "Период"
+    
+    # ========================================================================
+    # MEASURES - Базовые показатели баланса
+    # ========================================================================
+    measures:
+      # ----------------------------------------------------------------------
+      # АКТИВЫ
+      # ----------------------------------------------------------------------
+      - name: cash
+        sql: cash
+        type: sum
+        title: "Денежные средства"
+        format: currency
+      
+      - name: accountsReceivable
+        sql: accounts_receivable
+        type: sum
+        title: "Дебиторская задолженность"
+        format: currency
+      
+      - name: inventory
+        sql: inventory
+        type: sum
+        title: "Запасы"
+        format: currency
+      
+      - name: currentAssets
+        sql: current_assets
+        type: sum
+        title: "Оборотные активы"
+        description: "Раздел II баланса"
+        format: currency
+      
+      - name: fixedAssets
+        sql: fixed_assets
+        type: sum
+        title: "Внеоборотные активы"
+        description: "Раздел I баланса"
+        format: currency
+      
+      - name: totalAssets
+        sql: total_assets
+        type: sum
+        title: "Всего активов"
+        format: currency
+      
+      # ----------------------------------------------------------------------
+      # ОБЯЗАТЕЛЬСТВА
+      # ----------------------------------------------------------------------
+      - name: accountsPayable
+        sql: accounts_payable
+        type: sum
+        title: "Кредиторская задолженность"
+        format: currency
+      
+      - name: shortTermDebt
+        sql: short_term_debt
+        type: sum
+        title: "Краткосрочные займы"
+        format: currency
+      
+      - name: currentLiabilities
+        sql: current_liabilities
+        type: sum
+        title: "Краткосрочные обязательства"
+        description: "Раздел V баланса"
+        format: currency
+      
+      - name: longTermDebt
+        sql: long_term_debt
+        type: sum
+        title: "Долгосрочные займы"
+        format: currency
+      
+      - name: totalLiabilities
+        sql: total_liabilities
+        type: sum
+        title: "Всего обязательств"
+        format: currency
+      
+      # ----------------------------------------------------------------------
+      # КАПИТАЛ
+      # ----------------------------------------------------------------------
+      - name: equity
+        sql: equity
+        type: sum
+        title: "Собственный капитал"
+        description: "Раздел III баланса"
+        format: currency
+      
+      # ----------------------------------------------------------------------
+      # ФИНАНСОВЫЕ РЕЗУЛЬТАТЫ
+      # ----------------------------------------------------------------------
+      - name: revenue
+        sql: revenue
+        type: sum
+        title: "Выручка"
+        format: currency
+      
+      - name: costOfSales
+        sql: cost_of_sales
+        type: sum
+        title: "Себестоимость"
+        format: currency
+      
+      - name: netProfit
+        sql: net_profit
+        type: sum
+        title: "Чистая прибыль"
+        format: currency
+      
+      - name: grossProfit
+        sql: revenue - cost_of_sales
+        type: sum
+        title: "Валовая прибыль"
+        format: currency
+      
+      # ======================================================================
+      # КОЭФФИЦИЕНТЫ ЛИКВИДНОСТИ (Liquidity Ratios)
+      # ======================================================================
+      
+      # 1. Коэффициент текущей ликвидности (Current Ratio)
+      - name: currentRatio
+        sql: >
+          CASE 
+            WHEN ${currentLiabilities} > 0 
+            THEN ${currentAssets} / ${currentLiabilities}
+            ELSE NULL 
+          END
+        type: number
+        title: "Коэффициент текущей ликвидности"
+        description: "Способность погасить краткосрочные обязательства"
+        format: number
+        meta:
+          ai_description: |
+            **Формула**: Оборотные активы / Краткосрочные обязательства
+            
+            **Нормативное значение**: 1.5 - 2.5 (РСБУ)
+            
+            **Интерпретация**:
+            - < 1.0: Критическая ликвидность, риск неплатежеспособности
+            - 1.0 - 1.5: Недостаточная ликвидность
+            - 1.5 - 2.5: Нормальная ликвидность
+            - > 2.5: Избыточная ликвидность (неэффективное использование активов)
+            
+            **Пример**: "Коэффициент текущей ликвидности = 1.8 означает, что на каждый 
+            рубль краткосрочных обязательств приходится 1.80 рублей оборотных активов."
+      
+      # 2. Коэффициент быстрой ликвидности (Quick Ratio)
+      - name: quickRatio
+        sql: >
+          CASE 
+            WHEN ${currentLiabilities} > 0 
+            THEN (${currentAssets} - ${inventory}) / ${currentLiabilities}
+            ELSE NULL 
+          END
+        type: number
+        title: "Коэффициент быстрой ликвидности"
+        description: "Платежеспособность без учета запасов"
+        format: number
+        meta:
+          ai_description: |
+            **Формула**: (Оборотные активы - Запасы) / Краткосрочные обязательства
+            
+            **Нормативное значение**: 0.7 - 1.0
+            
+            **Интерпретация**:
+            - < 0.5: Критическая ситуация
+            - 0.5 - 0.7: Недостаточная ликвидность
+            - 0.7 - 1.0: Нормальная ликвидность
+            - > 1.0: Хорошая ликвидность
+            
+            Показывает способность погасить обязательства без продажи запасов.
+      
+      # 3. Коэффициент абсолютной ликвидности (Cash Ratio)
+      - name: cashRatio
+        sql: >
+          CASE 
+            WHEN ${currentLiabilities} > 0 
+            THEN ${cash} / ${currentLiabilities}
+            ELSE NULL 
+          END
+        type: number
+        title: "Коэффициент абсолютной ликвидности"
+        description: "Мгновенная платежеспособность"
+        format: number
+        meta:
+          ai_description: |
+            **Формула**: Денежные средства / Краткосрочные обязательства
+            
+            **Нормативное значение**: 0.2 - 0.3
+            
+            Показывает, какую часть краткосрочных обязательств компания может 
+            погасить немедленно за счет денежных средств.
+      
+      # ======================================================================
+      # КОЭФФИЦИЕНТЫ РЕНТАБЕЛЬНОСТИ (Profitability Ratios)
+      # ======================================================================
+      
+      # 4. Рентабельность активов (ROA)
+      - name: roa
+        sql: >
+          CASE 
+            WHEN ${totalAssets} > 0 
+            THEN (${netProfit} / ${totalAssets}) * 100
+            ELSE NULL 
+          END
+        type: number
+        title: "ROA (Return on Assets)"
+        description: "Рентабельность активов"
+        format: percent
+        meta:
+          ai_description: |
+            **Формула**: (Чистая прибыль / Активы) × 100%
+            
+            **Интерпретация**:
+            - < 0%: Убыточность
+            - 0-5%: Низкая эффективность
+            - 5-10%: Средняя эффективность
+            - > 10%: Высокая эффективность
+            
+            Показывает, сколько прибыли приносит каждый рубль активов.
+      
+      # 5. Рентабельность собственного капитала (ROE)
+      - name: roe
+        sql: >
+          CASE 
+            WHEN ${equity} > 0 
+            THEN (${netProfit} / ${equity}) * 100
+            ELSE NULL 
+          END
+        type: number
+        title: "ROE (Return on Equity)"
+        description: "Рентабельность собственного капитала"
+        format: percent
+        meta:
+          ai_description: |
+            **Формула**: (Чистая прибыль / Собственный капитал) × 100%
+            
+            **Нормативное значение**: > 10-15%
+            
+            Показывает доходность инвестиций акционеров/собственников.
+            Ключевой показатель для инвесторов.
+      
+      # 6. Рентабельность продаж (ROS)
+      - name: ros
+        sql: >
+          CASE 
+            WHEN ${revenue} > 0 
+            THEN (${netProfit} / ${revenue}) * 100
+            ELSE NULL 
+          END
+        type: number
+        title: "ROS (Return on Sales)"
+        description: "Рентабельность продаж"
+        format: percent
+        meta:
+          ai_description: |
+            **Формула**: (Чистая прибыль / Выручка) × 100%
+            
+            **Интерпретация** (зависит от отрасли):
+            - Торговля: 1-3%
+            - Производство: 5-15%
+            - IT/Услуги: 15-30%
+            
+            Показывает, сколько копеек прибыли в каждом рубле выручки.
+      
+      # 7. Валовая рентабельность (Gross Margin)
+      - name: grossMargin
+        sql: >
+          CASE 
+            WHEN ${revenue} > 0 
+            THEN ((${revenue} - ${costOfSales}) / ${revenue}) * 100
+            ELSE NULL 
+          END
+        type: number
+        title: "Валовая рентабельность"
+        description: "Gross Margin (%)"
+        format: percent
+        meta:
+          ai_description: |
+            **Формула**: ((Выручка - Себестоимость) / Выручка) × 100%
+            
+            Показывает долю валовой прибыли в выручке до вычета 
+            операционных расходов.
+      
+      # ======================================================================
+      # КОЭФФИЦИЕНТЫ ОБОРАЧИВАЕМОСТИ (Turnover Ratios)
+      # ======================================================================
+      
+      # 8. Оборачиваемость дебиторской задолженности
+      - name: arTurnover
+        sql: >
+          CASE 
+            WHEN ${accountsReceivable} > 0 
+            THEN ${revenue} / ${accountsReceivable}
+            ELSE NULL 
+          END
+        type: number
+        title: "Оборачиваемость дебиторской задолженности"
+        description: "Количество оборотов ДЗ за период"
+        format: number
+        meta:
+          ai_description: |
+            **Формула**: Выручка / Дебиторская задолженность
+            
+            Показывает, сколько раз за период погашается дебиторская задолженность.
+            Высокий коэффициент = быстрое получение денег от покупателей.
+      
+      # 9. Период оборота дебиторской задолженности (в днях)
+      - name: dso
+        sql: >
+          CASE 
+            WHEN ${revenue} > 0 
+            THEN (${accountsReceivable} / ${revenue}) * 365
+            ELSE NULL 
+          END
+        type: number
+        title: "DSO (Days Sales Outstanding)"
+        description: "Период оборота ДЗ (дни)"
+        format: number
+        meta:
+          ai_description: |
+            **Формула**: (Дебиторская задолженность / Выручка) × 365 дней
+            
+            **Интерпретация**:
+            - < 30 дней: Отлично
+            - 30-60 дней: Хорошо
+            - 60-90 дней: Приемлемо
+            - > 90 дней: Проблемы со взысканием
+            
+            Показывает среднее количество дней от продажи до получения оплаты.
+      
+      # 10. Оборачиваемость запасов
+      - name: inventoryTurnover
+        sql: >
+          CASE 
+            WHEN ${inventory} > 0 
+            THEN ${costOfSales} / ${inventory}
+            ELSE NULL 
+          END
+        type: number
+        title: "Оборачиваемость запасов"
+        description: "Inventory Turnover"
+        format: number
+        meta:
+          ai_description: |
+            **Формула**: Себестоимость / Запасы
+            
+            Показывает, сколько раз за период продаются запасы.
+            Высокий коэффициент = эффективное управление запасами.
+      
+      # 11. Период оборота запасов (в днях)
+      - name: daysInventoryOutstanding
+        sql: >
+          CASE 
+            WHEN ${costOfSales} > 0 
+            THEN (${inventory} / ${costOfSales}) * 365
+            ELSE NULL 
+          END
+        type: number
+        title: "DIO (Days Inventory Outstanding)"
+        description: "Период оборота запасов (дни)"
+        format: number
+      
+      # 12. Оборачиваемость кредиторской задолженности
+      - name: apTurnover
+        sql: >
+          CASE 
+            WHEN ${accountsPayable} > 0 
+            THEN ${costOfSales} / ${accountsPayable}
+            ELSE NULL 
+          END
+        type: number
+        title: "Оборачиваемость кредиторской задолженности"
+        description: "AP Turnover"
+        format: number
+      
+      # 13. Период оборота кредиторской задолженности (в днях)
+      - name: dpo
+        sql: >
+          CASE 
+            WHEN ${costOfSales} > 0 
+            THEN (${accountsPayable} / ${costOfSales}) * 365
+            ELSE NULL 
+          END
+        type: number
+        title: "DPO (Days Payable Outstanding)"
+        description: "Период оборота КЗ (дни)"
+        format: number
+        meta:
+          ai_description: |
+            **Формула**: (Кредиторская задолженность / Себестоимость) × 365
+            
+            Показывает среднее количество дней отсрочки платежа поставщикам.
+            Более высокий DPO может быть выгоден для cash flow.
+      
+      # 14. Операционный цикл (Operating Cycle)
+      - name: operatingCycle
+        sql: ${dso} + ${daysInventoryOutstanding}
+        type: number
+        title: "Операционный цикл"
+        description: "DSO + DIO (дни)"
+        format: number
+        meta:
+          ai_description: |
+            **Формула**: Период оборота ДЗ + Период оборота запасов
+            
+            Показывает время от покупки запасов до получения денег от покупателей.
+            Более короткий цикл = более эффективная операционная деятельность.
+      
+      # 15. Финансовый цикл (Cash Conversion Cycle)
+      - name: cashConversionCycle
+        sql: ${operatingCycle} - ${dpo}
+        type: number
+        title: "Финансовый цикл"
+        description: "CCC (дни)"
+        format: number
+        meta:
+          ai_description: |
+            **Формула**: Операционный цикл - Период оборота КЗ
+            
+            **Интерпретация**:
+            - < 0: Отрицательный цикл (поставщики финансируют оборот)
+            - 0-30: Отлично
+            - 30-60: Хорошо
+            - > 60: Требуется оптимизация
+            
+            Показывает, сколько дней средства заморожены в операциях.
+      
+      # ======================================================================
+      # КОЭФФИЦИЕНТЫ ФИНАНСОВОЙ УСТОЙЧИВОСТИ (Leverage Ratios)
+      # ======================================================================
+      
+      # 16. Коэффициент автономии (Equity Ratio)
+      - name: equityRatio
+        sql: >
+          CASE 
+            WHEN ${totalAssets} > 0 
+            THEN (${equity} / ${totalAssets}) * 100
+            ELSE NULL 
+          END
+        type: number
+        title: "Коэффициент автономии"
+        description: "Доля собственного капитала"
+        format: percent
+        meta:
+          ai_description: |
+            **Формула**: (Собственный капитал / Активы) × 100%
+            
+            **Нормативное значение**: > 50%
+            
+            **Интерпретация**:
+            - > 60%: Высокая финансовая независимость
+            - 40-60%: Нормальная финансовая устойчивость
+            - < 40%: Зависимость от заемных средств
+            
+            Показывает долю активов, финансируемых собственными средствами.
+      
+      # 17. Коэффициент финансового рычага (Debt-to-Equity)
+      - name: debtToEquity
+        sql: >
+          CASE 
+            WHEN ${equity} > 0 
+            THEN ${totalLiabilities} / ${equity}
+            ELSE NULL 
+          END
+        type: number
+        title: "Коэффициент финансового рычага"
+        description: "Debt-to-Equity Ratio"
+        format: number
+        meta:
+          ai_description: |
+            **Формула**: Обязательства / Собственный капитал
+            
+            **Интерпретация**:
+            - < 1.0: Консервативная структура капитала
+            - 1.0-2.0: Сбалансированная структура
+            - > 2.0: Агрессивная политика заимствований
+            
+            Показывает, сколько рублей заемных средств на 1 рубль собственного капитала.
+      
+      # 18. Коэффициент покрытия процентов (Interest Coverage)
+      - name: interestCoverage
+        sql: >
+          CASE 
+            WHEN ${shortTermDebt} + ${longTermDebt} > 0 
+            THEN ${grossProfit} / (${shortTermDebt} + ${longTermDebt})
+            ELSE NULL 
+          END
+        type: number
+        title: "Покрытие процентов"
+        description: "Упрощенный Interest Coverage"
+        format: number
+        meta:
+          ai_description: |
+            **Упрощенная формула**: Валовая прибыль / Общий долг
+            
+            (Для точного расчета нужны данные о процентных расходах из счета 91.02)
+            
+            Показывает способность обслуживать долг.
+      
+      # 19. Коэффициент общей задолженности (Debt Ratio)
+      - name: debtRatio
+        sql: >
+          CASE 
+            WHEN ${totalAssets} > 0 
+            THEN (${totalLiabilities} / ${totalAssets}) * 100
+            ELSE NULL 
+          END
+        type: number
+        title: "Коэффициент задолженности"
+        description: "Debt Ratio (%)"
+        format: percent
+        meta:
+          ai_description: |
+            **Формула**: (Обязательства / Активы) × 100%
+            
+            **Нормативное значение**: < 50%
+            
+            Показывает долю активов, финансируемых за счет заемных средств.
+      
+      # ======================================================================
+      # ДОПОЛНИТЕЛЬНЫЕ ПОКАЗАТЕЛИ
+      # ======================================================================
+      
+      # 20. Чистый оборотный капитал (Net Working Capital)
+      - name: workingCapital
+        sql: ${currentAssets} - ${currentLiabilities}
+        type: sum
+        title: "Чистый оборотный капитал"
+        description: "NWC (рубли)"
+        format: currency
+        meta:
+          ai_description: |
+            **Формула**: Оборотные активы - Краткосрочные обязательства
+            
+            Положительное значение = компания может финансировать текущую деятельность.
+            Отрицательное значение = дефицит оборотных средств.
+    
+    # ========================================================================
+    # SEGMENTS
+    # ========================================================================
+    segments:
+      # Финансово здоровые компании
+      - name: healthyCompanies
+        sql: >
+          ${currentRatio} >= 1.5 
+          AND ${equityRatio} >= 40 
+          AND ${netProfit} > 0
+        title: "Финансово здоровые"
+        description: "Коэффициенты в норме, прибыльные"
+      
+      # Проблемные компании
+      - name: distressedCompanies
+        sql: >
+          ${currentRatio} < 1.0 
+          OR ${equityRatio} < 30 
+          OR ${netProfit} < 0
+        title: "Проблемные"
+        description: "Низкая ликвидность или убытки"
+      
+      # Прибыльные компании
+      - name: profitableCompanies
+        sql: ${netProfit} > 0
+        title: "Прибыльные"
+        description: "Положительная чистая прибыль"
+      
+      # Высокорентабельные
+      - name: highROE
+        sql: ${roe} > 15
+        title: "Высокая рентабельность"
+        description: "ROE > 15%"
+    
+    # ========================================================================
+    # PRE-AGGREGATIONS
+    # ========================================================================
+    preAggregations:
+      - name: ratiosByCompanyMonth
+        measures:
+          - currentRatio
+          - quickRatio
+          - roa
+          - roe
+          - ros
+          - debtToEquity
+        dimensions:
+          - companyName
+          - periodDate
+        timeDimension: periodDate
+        granularity: month
+        refreshKey:
+          every: 2 hours

@@ -1,0 +1,589 @@
+# ============================================================================
+# CUBE SCHEMA: Оборотно-сальдовая ведомость (Trial Balance)
+# ============================================================================
+# Описание: Основной куб для финансовых данных с методиками анализа
+# Использование: ОСВ + коэффициентный анализ + горизонтальный анализ
+# ============================================================================
+
+cubes:
+  - name: TrialBalance
+    sql: >
+      SELECT 
+        tb.company_id,
+        c.company_name,
+        c.group_id,
+        tb.account_id,
+        a.account_code,
+        a.account_name,
+        a.rsbu_type,
+        a.balance_mgmt_group,
+        a.balance_equation_class,
+        a.liquidity_group,
+        tb.period_date,
+        tb.analytics1_id,
+        tb.analytics2_id,
+        tb.analytics3_id,
+        an1.name as analytics1_name,
+        an2.name as analytics2_name,
+        an3.name as analytics3_name,
+        tb.opening_debit_balance,
+        tb.opening_credit_balance,
+        tb.debit_turnover,
+        tb.credit_turnover,
+        tb.closing_debit_balance,
+        tb.closing_credit_balance,
+        -- Вычисляемые поля для анализа
+        (tb.closing_debit_balance - tb.closing_credit_balance) as net_balance,
+        (tb.debit_turnover - tb.credit_turnover) as net_turnover
+      FROM trial_balance tb
+      INNER JOIN companies c ON tb.company_id = c.company_id
+      INNER JOIN accounts a ON tb.account_id = a.account_id
+      LEFT JOIN analytics1 an1 ON tb.analytics1_id = an1.id
+      LEFT JOIN analytics2 an2 ON tb.analytics2_id = an2.id
+      LEFT JOIN analytics3 an3 ON tb.analytics3_id = an3.id
+      WHERE tb.period_date >= '2024-01-01'  -- Оптимизация: только актуальные периоды
+    
+    title: "Оборотно-сальдовая ведомость"
+    description: >
+      Основная финансовая отчетность с оборотами и остатками по счетам.
+      Поддерживает многоуровневую аналитику и различные методики анализа.
+    
+    # ========================================================================
+    # JOINS (Связи с другими кубами)
+    # ========================================================================
+    joins:
+      - name: Accounts
+        sql: ${TrialBalance.account_id} = ${Accounts.account_id}
+        relationship: manyToOne
+    
+    # ========================================================================
+    # DIMENSIONS (Измерения)
+    # ========================================================================
+    dimensions:
+      # Компания
+      - name: companyId
+        sql: company_id
+        type: number
+        primaryKey: true
+      
+      - name: companyName
+        sql: company_name
+        type: string
+        title: "Компания"
+        description: "Наименование организации"
+      
+      - name: groupId
+        sql: group_id
+        type: number
+        title: "Группа компаний"
+        description: "ID группы для консолидации"
+      
+      # Счет
+      - name: accountCode
+        sql: account_code
+        type: string
+        title: "Счет"
+        description: "Код счета бухгалтерского учета"
+      
+      - name: accountName
+        sql: account_name
+        type: string
+        title: "Наименование счета"
+      
+      - name: rsbuType
+        sql: rsbu_type
+        type: string
+        title: "Тип счета"
+        description: "А/П/АП"
+      
+      - name: balanceMgmtGroup
+        sql: balance_mgmt_group
+        type: string
+        title: "Группа баланса"
+        description: "AR, AP, CASH, INVENTORY, DEBT, EQUITY, etc."
+      
+      # Период
+      - name: periodDate
+        sql: period_date
+        type: time
+        title: "Дата периода"
+        description: "Дата окончания отчетного периода"
+      
+      # Аналитики
+      - name: analytics1Name
+        sql: analytics1_name
+        type: string
+        title: "Аналитика 1"
+        description: "Контрагент, номенклатура и т.д."
+      
+      - name: analytics2Name
+        sql: analytics2_name
+        type: string
+        title: "Аналитика 2"
+        description: "Договор, склад и т.д."
+      
+      - name: analytics3Name
+        sql: analytics3_name
+        type: string
+        title: "Аналитика 3"
+        description: "Партия и т.д."
+    
+    # ========================================================================
+    # MEASURES (Метрики) - Базовые показатели ОСВ
+    # ========================================================================
+    measures:
+      # ----------------------------------------------------------------------
+      # 1. ОСТАТКИ (Balances)
+      # ----------------------------------------------------------------------
+      - name: openingDebitBalance
+        sql: opening_debit_balance
+        type: sum
+        title: "Начальное дебетовое сальдо"
+        description: "Остаток по дебету на начало периода"
+        format: currency
+      
+      - name: openingCreditBalance
+        sql: opening_credit_balance
+        type: sum
+        title: "Начальное кредитовое сальдо"
+        description: "Остаток по кредиту на начало периода"
+        format: currency
+      
+      - name: closingDebitBalance
+        sql: closing_debit_balance
+        type: sum
+        title: "Конечное дебетовое сальдо"
+        description: "Остаток по дебету на конец периода"
+        format: currency
+      
+      - name: closingCreditBalance
+        sql: closing_credit_balance
+        type: sum
+        title: "Конечное кредитовое сальдо"
+        description: "Остаток по кредиту на конец периода"
+        format: currency
+      
+      # Развернутое сальдо (для активно-пассивных счетов)
+      - name: netBalance
+        sql: net_balance
+        type: sum
+        title: "Свернутое сальдо"
+        description: "Дебет минус кредит (может быть отрицательным)"
+        format: currency
+        meta:
+          ai_description: |
+            Разница между дебетовым и кредитовым сальдо.
+            Положительное значение = дебетовое сальдо (актив)
+            Отрицательное значение = кредитовое сальдо (пассив)
+      
+      # ----------------------------------------------------------------------
+      # 2. ОБОРОТЫ (Turnovers)
+      # ----------------------------------------------------------------------
+      - name: debitTurnover
+        sql: debit_turnover
+        type: sum
+        title: "Дебетовый оборот"
+        description: "Сумма операций по дебету за период"
+        format: currency
+      
+      - name: creditTurnover
+        sql: credit_turnover
+        type: sum
+        title: "Кредитовый оборот"
+        description: "Сумма операций по кредиту за период"
+        format: currency
+      
+      - name: netTurnover
+        sql: net_turnover
+        type: sum
+        title: "Нетто-оборот"
+        description: "Разница между дебетовым и кредитовым оборотом"
+        format: currency
+      
+      - name: totalTurnover
+        sql: debit_turnover + credit_turnover
+        type: sum
+        title: "Общий оборот"
+        description: "Сумма дебетового и кредитового оборотов"
+        format: currency
+      
+      # ----------------------------------------------------------------------
+      # 3. КОЭФФИЦИЕНТЫ ОБОРАЧИВАЕМОСТИ
+      # ----------------------------------------------------------------------
+      - name: turnoverRatio
+        sql: >
+          CASE 
+            WHEN (${openingDebitBalance} + ${closingDebitBalance}) > 0 
+            THEN ${debitTurnover} / ((${openingDebitBalance} + ${closingDebitBalance}) / 2)
+            ELSE 0 
+          END
+        type: avg
+        title: "Коэффициент оборачиваемости"
+        description: "Количество оборотов актива за период"
+        format: number
+        meta:
+          ai_description: |
+            Показывает, сколько раз актив "обернулся" за период.
+            Формула: Оборот / Средний остаток
+            
+            Интерпретация:
+            - Высокий коэффициент = эффективное использование актива
+            - Низкий коэффициент = замораживание средств
+            
+            Применяется для: дебиторской задолженности, запасов, основных средств
+      
+      # ----------------------------------------------------------------------
+      # 4. СЧЕТЧИКИ
+      # ----------------------------------------------------------------------
+      - name: recordCount
+        type: count
+        title: "Количество записей"
+        description: "Число строк ОСВ"
+    
+    # ========================================================================
+    # SEGMENTS (Фильтры для специфических задач)
+    # ========================================================================
+    segments:
+      # Активы
+      - name: assets
+        sql: ${rsbuType} = 'А' AND ${closingDebitBalance} > 0
+        title: "Активы"
+        description: "Счета с дебетовым остатком"
+      
+      - name: liabilities
+        sql: ${rsbuType} = 'П' AND ${closingCreditBalance} > 0
+        title: "Пассивы"
+        description: "Счета с кредитовым остатком"
+      
+      # Оборотные активы
+      - name: currentAssets
+        sql: >
+          ${balanceMgmtGroup} IN ('CASH', 'AR', 'INVENTORY') 
+          AND ${closingDebitBalance} > 0
+        title: "Оборотные активы"
+        description: "Раздел II баланса"
+      
+      # Краткосрочные обязательства
+      - name: currentLiabilities
+        sql: >
+          ${balanceMgmtGroup} IN ('AP', 'DEBT_SHORT') 
+          AND ${closingCreditBalance} > 0
+        title: "Краткосрочные обязательства"
+        description: "Раздел V баланса"
+      
+      # Движение за период (не нулевые обороты)
+      - name: withMovement
+        sql: ${debitTurnover} + ${creditTurnover} > 0
+        title: "С движением"
+        description: "Счета с оборотами за период"
+      
+      # Только операционная деятельность
+      - name: operatingAccounts
+        sql: >
+          ${balanceEquationClass} IN ('OPERATING_ASSETS', 'OPERATING_LIABILITIES')
+        title: "Операционные счета"
+        description: "Счета основной деятельности (без финансирования и инвестиций)"
+    
+    # ========================================================================
+    # PRE-AGGREGATIONS (Оптимизация производительности)
+    # ========================================================================
+    preAggregations:
+      # По компаниям и счетам (самый частый запрос)
+      - name: balancesByCompanyAccount
+        measures:
+          - closingDebitBalance
+          - closingCreditBalance
+          - debitTurnover
+          - creditTurnover
+        dimensions:
+          - companyName
+          - accountCode
+          - periodDate
+        timeDimension: periodDate
+        granularity: month
+        refreshKey:
+          every: 1 hour
+        partitionGranularity: month
+      
+      # По группам баланса (для финансового анализа)
+      - name: balancesByGroup
+        measures:
+          - closingDebitBalance
+          - closingCreditBalance
+          - netBalance
+        dimensions:
+          - companyName
+          - balanceMgmtGroup
+          - periodDate
+        timeDimension: periodDate
+        granularity: month
+        refreshKey:
+          every: 1 hour
+      
+      # Консолидированные данные группы
+      - name: consolidatedBalances
+        measures:
+          - closingDebitBalance
+          - closingCreditBalance
+          - debitTurnover
+          - creditTurnover
+        dimensions:
+          - groupId
+          - accountCode
+          - periodDate
+        timeDimension: periodDate
+        granularity: month
+        refreshKey:
+          every: 2 hours
+
+
+# ============================================================================
+# ДОПОЛНИТЕЛЬНЫЙ КУБ: Горизонтальный анализ
+# ============================================================================
+# Описание: Сравнение показателей между периодами
+# ============================================================================
+
+  - name: HorizontalAnalysis
+    sql: >
+      WITH current_period AS (
+        SELECT 
+          tb.company_id,
+          c.company_name,
+          tb.account_id,
+          a.account_code,
+          a.account_name,
+          a.balance_mgmt_group,
+          tb.period_date,
+          (tb.closing_debit_balance - tb.closing_credit_balance) as balance,
+          tb.debit_turnover,
+          tb.credit_turnover
+        FROM trial_balance tb
+        INNER JOIN companies c ON tb.company_id = c.company_id
+        INNER JOIN accounts a ON tb.account_id = a.account_id
+      ),
+      previous_period AS (
+        SELECT 
+          company_id,
+          account_id,
+          period_date,
+          balance as prev_balance,
+          debit_turnover as prev_debit_turnover,
+          credit_turnover as prev_credit_turnover,
+          LEAD(period_date) OVER (
+            PARTITION BY company_id, account_id 
+            ORDER BY period_date
+          ) as next_period_date
+        FROM current_period
+      )
+      SELECT 
+        cp.company_id,
+        cp.company_name,
+        cp.account_code,
+        cp.account_name,
+        cp.balance_mgmt_group,
+        cp.period_date,
+        cp.balance as current_balance,
+        pp.prev_balance as previous_balance,
+        cp.debit_turnover as current_debit_turnover,
+        pp.prev_debit_turnover as previous_debit_turnover,
+        cp.credit_turnover as current_credit_turnover,
+        pp.prev_credit_turnover as previous_credit_turnover
+      FROM current_period cp
+      LEFT JOIN previous_period pp 
+        ON cp.company_id = pp.company_id 
+        AND cp.account_id = pp.account_id
+        AND cp.period_date = pp.next_period_date
+    
+    title: "Горизонтальный анализ"
+    description: >
+      Сравнение финансовых показателей между периодами.
+      Рассчитывает абсолютные и относительные изменения.
+    
+    dimensions:
+      - name: companyName
+        sql: company_name
+        type: string
+        title: "Компания"
+      
+      - name: accountCode
+        sql: account_code
+        type: string
+        title: "Счет"
+      
+      - name: accountName
+        sql: account_name
+        type: string
+        title: "Наименование счета"
+      
+      - name: balanceMgmtGroup
+        sql: balance_mgmt_group
+        type: string
+        title: "Группа баланса"
+      
+      - name: periodDate
+        sql: period_date
+        type: time
+        title: "Текущий период"
+    
+    measures:
+      # Текущий период
+      - name: currentBalance
+        sql: current_balance
+        type: sum
+        title: "Текущий остаток"
+        format: currency
+      
+      - name: previousBalance
+        sql: previous_balance
+        type: sum
+        title: "Предыдущий остаток"
+        format: currency
+      
+      # Абсолютное изменение
+      - name: absoluteChange
+        sql: current_balance - previous_balance
+        type: sum
+        title: "Абсолютное изменение"
+        description: "Изменение остатка в денежном выражении"
+        format: currency
+        meta:
+          ai_description: |
+            Разница между текущим и предыдущим периодом.
+            Показывает, на сколько рублей увеличился/уменьшился показатель.
+            
+            Положительное значение = рост
+            Отрицательное значение = снижение
+      
+      # Относительное изменение (%)
+      - name: percentChange
+        sql: >
+          CASE 
+            WHEN previous_balance != 0 
+            THEN ((current_balance - previous_balance) / ABS(previous_balance)) * 100
+            WHEN current_balance != 0 THEN 100  -- Появление с нуля = 100%
+            ELSE 0 
+          END
+        type: avg
+        title: "Изменение (%)"
+        description: "Процентное изменение показателя"
+        format: percent
+        meta:
+          ai_description: |
+            Процент изменения показателя относительно предыдущего периода.
+            Формула: ((Текущий - Предыдущий) / Предыдущий) × 100%
+            
+            Интерпретация:
+            - +10% = увеличение на 10%
+            - -15% = снижение на 15%
+            - 100% = показатель появился с нуля
+      
+      # Темп роста (chain index)
+      - name: growthRate
+        sql: >
+          CASE 
+            WHEN previous_balance != 0 
+            THEN current_balance / previous_balance
+            ELSE NULL 
+          END
+        type: avg
+        title: "Темп роста"
+        description: "Индекс цепного роста (текущий/предыдущий)"
+        format: number
+        meta:
+          ai_description: |
+            Отношение текущего показателя к предыдущему.
+            
+            Интерпретация:
+            - 1.0 = без изменений
+            - > 1.0 = рост (1.15 = рост на 15%)
+            - < 1.0 = снижение (0.85 = снижение на 15%)
+      
+      # Темп прироста
+      - name: growthRatePercent
+        sql: >
+          CASE 
+            WHEN previous_balance != 0 
+            THEN ((current_balance / previous_balance) - 1) * 100
+            ELSE NULL 
+          END
+        type: avg
+        title: "Темп прироста (%)"
+        description: "Процент прироста/снижения"
+        format: percent
+      
+      # Обороты - текущий период
+      - name: currentDebitTurnover
+        sql: current_debit_turnover
+        type: sum
+        title: "Дебетовый оборот (текущий)"
+        format: currency
+      
+      - name: previousDebitTurnover
+        sql: previous_debit_turnover
+        type: sum
+        title: "Дебетовый оборот (предыдущий)"
+        format: currency
+      
+      # Изменение оборотов
+      - name: turnoverChange
+        sql: current_debit_turnover - previous_debit_turnover
+        type: sum
+        title: "Изменение оборота"
+        description: "Абсолютное изменение дебетового оборота"
+        format: currency
+      
+      - name: turnoverChangePercent
+        sql: >
+          CASE 
+            WHEN previous_debit_turnover != 0 
+            THEN ((current_debit_turnover - previous_debit_turnover) / previous_debit_turnover) * 100
+            ELSE 0 
+          END
+        type: avg
+        title: "Изменение оборота (%)"
+        format: percent
+    
+    segments:
+      # Значительный рост (>20%)
+      - name: significantGrowth
+        sql: >
+          CASE 
+            WHEN previous_balance != 0 
+            THEN ((current_balance - previous_balance) / ABS(previous_balance)) > 0.2
+            ELSE false 
+          END
+        title: "Значительный рост"
+        description: "Показатели с ростом более 20%"
+      
+      # Значительное снижение (<-20%)
+      - name: significantDecline
+        sql: >
+          CASE 
+            WHEN previous_balance != 0 
+            THEN ((current_balance - previous_balance) / ABS(previous_balance)) < -0.2
+            ELSE false 
+          END
+        title: "Значительное снижение"
+        description: "Показатели со снижением более 20%"
+      
+      # Изменение знака (с плюса на минус или наоборот)
+      - name: signChange
+        sql: (current_balance * previous_balance) < 0
+        title: "Изменение знака"
+        description: "Показатели с изменением знака остатка"
+    
+    preAggregations:
+      - name: horizontalByCompanyAccount
+        measures:
+          - currentBalance
+          - previousBalance
+          - absoluteChange
+          - percentChange
+        dimensions:
+          - companyName
+          - accountCode
+          - periodDate
+        timeDimension: periodDate
+        granularity: month
+        refreshKey:
+          every: 1 hour

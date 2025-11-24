@@ -1,0 +1,507 @@
+# ============================================================================
+# CUBE SCHEMA: Консолидированная отчетность (Consolidated Reporting)
+# ============================================================================
+# Описание: Консолидация финансовой отчетности группы с элиминациями
+# Использование: Групповая отчетность, межфирменные операции
+# ============================================================================
+
+cubes:
+  - name: Consolidation
+    sql: >
+      WITH group_balances AS (
+        -- Собираем остатки всех компаний группы
+        SELECT 
+          c.group_id,
+          g.group_name,
+          tb.period_date,
+          a.account_code,
+          a.account_name,
+          a.balance_mgmt_group,
+          a.balance_equation_class,
+          SUM(tb.closing_debit_balance) as total_debit_balance,
+          SUM(tb.closing_credit_balance) as total_credit_balance,
+          SUM(tb.debit_turnover) as total_debit_turnover,
+          SUM(tb.credit_turnover) as total_credit_turnover,
+          -- Для аналитики по компаниям
+          COUNT(DISTINCT tb.company_id) as company_count
+        FROM trial_balance tb
+        INNER JOIN companies c ON tb.company_id = c.company_id
+        INNER JOIN company_groups g ON c.group_id = g.group_id
+        INNER JOIN accounts a ON tb.account_id = a.account_id
+        WHERE c.group_id IS NOT NULL  -- Только компании, входящие в группы
+        GROUP BY c.group_id, g.group_name, tb.period_date, a.account_code, 
+                 a.account_name, a.balance_mgmt_group, a.balance_equation_class
+      ),
+      intercompany_eliminations AS (
+        -- Межфирменные обороты для элиминации
+        -- Логика: операции между компаниями одной группы исключаются
+        SELECT 
+          c1.group_id,
+          tb1.period_date,
+          tb1.account_code,
+          -- Взаимные обороты по дебиторской задолженности (62) и кредиторской (60)
+          SUM(CASE 
+            WHEN tb1.account_code LIKE '62%' 
+                 AND tb2.account_code LIKE '60%'
+                 AND tb1.analytics1_id = c2.company_id  -- Контрагент = другая компания группы
+            THEN LEAST(tb1.closing_debit_balance, tb2.closing_credit_balance)
+            ELSE 0 
+          END) as ar_ap_elimination,
+          -- Внутригрупповая выручка (90.01)
+          SUM(CASE 
+            WHEN tb1.account_code LIKE '90.01%'
+                 AND tb1.analytics1_id = c2.company_id
+            THEN tb1.credit_turnover
+            ELSE 0 
+          END) as revenue_elimination
+        FROM trial_balance tb1
+        INNER JOIN companies c1 ON tb1.company_id = c1.company_id
+        INNER JOIN trial_balance tb2 ON tb1.analytics1_id = tb2.company_id
+        INNER JOIN companies c2 ON tb2.company_id = c2.company_id
+        WHERE c1.group_id = c2.group_id  -- Та же группа
+          AND c1.company_id != c2.company_id  -- Разные компании
+        GROUP BY c1.group_id, tb1.period_date, tb1.account_code
+      )
+      SELECT 
+        gb.group_id,
+        gb.group_name,
+        gb.period_date,
+        gb.account_code,
+        gb.account_name,
+        gb.balance_mgmt_group,
+        gb.balance_equation_class,
+        gb.total_debit_balance,
+        gb.total_credit_balance,
+        gb.total_debit_turnover,
+        gb.total_credit_turnover,
+        gb.company_count,
+        COALESCE(ie.ar_ap_elimination, 0) as intercompany_balance_elim,
+        COALESCE(ie.revenue_elimination, 0) as intercompany_revenue_elim,
+        -- Консолидированные показатели (после элиминаций)
+        gb.total_debit_balance - COALESCE(ie.ar_ap_elimination, 0) as consolidated_debit_balance,
+        gb.total_credit_balance - COALESCE(ie.ar_ap_elimination, 0) as consolidated_credit_balance,
+        gb.total_credit_turnover - COALESCE(ie.revenue_elimination, 0) as consolidated_revenue
+      FROM group_balances gb
+      LEFT JOIN intercompany_eliminations ie 
+        ON gb.group_id = ie.group_id 
+        AND gb.period_date = ie.period_date 
+        AND gb.account_code = ie.account_code
+    
+    title: "Консолидированная отчетность"
+    description: >
+      Финансовая отчетность группы компаний с исключением 
+      внутригрупповых оборотов и остатков (элиминации).
+    
+    # ========================================================================
+    # DIMENSIONS
+    # ========================================================================
+    dimensions:
+      - name: groupId
+        sql: group_id
+        type: number
+        primaryKey: true
+        title: "ID группы"
+      
+      - name: groupName
+        sql: group_name
+        type: string
+        title: "Группа компаний"
+        description: "Наименование холдинга/группы"
+      
+      - name: periodDate
+        sql: period_date
+        type: time
+        title: "Период"
+      
+      - name: accountCode
+        sql: account_code
+        type: string
+        title: "Счет"
+      
+      - name: accountName
+        sql: account_name
+        type: string
+        title: "Наименование счета"
+      
+      - name: balanceMgmtGroup
+        sql: balance_mgmt_group
+        type: string
+        title: "Группа баланса"
+      
+      - name: balanceEquationClass
+        sql: balance_equation_class
+        type: string
+        title: "Класс балансового уравнения"
+      
+      - name: companyCount
+        sql: company_count
+        type: number
+        title: "Количество компаний в группе"
+    
+    # ========================================================================
+    # MEASURES - До элиминаций (сумма по всем компаниям)
+    # ========================================================================
+    measures:
+      # ----------------------------------------------------------------------
+      # СУММАРНЫЕ ПОКАЗАТЕЛИ (до элиминаций)
+      # ----------------------------------------------------------------------
+      - name: totalDebitBalance
+        sql: total_debit_balance
+        type: sum
+        title: "Дебет (всего)"
+        description: "Сумма дебетовых остатков всех компаний группы"
+        format: currency
+      
+      - name: totalCreditBalance
+        sql: total_credit_balance
+        type: sum
+        title: "Кредит (всего)"
+        description: "Сумма кредитовых остатков всех компаний группы"
+        format: currency
+      
+      - name: totalDebitTurnover
+        sql: total_debit_turnover
+        type: sum
+        title: "Дебетовый оборот (всего)"
+        format: currency
+      
+      - name: totalCreditTurnover
+        sql: total_credit_turnover
+        type: sum
+        title: "Кредитовый оборот (всего)"
+        format: currency
+      
+      # ----------------------------------------------------------------------
+      # ЭЛИМИНАЦИИ (исключаемые суммы)
+      # ----------------------------------------------------------------------
+      - name: intercompanyBalanceElim
+        sql: intercompany_balance_elim
+        type: sum
+        title: "Элиминация взаимных остатков"
+        description: "Сумма дебиторской и кредиторской задолженности между компаниями группы"
+        format: currency
+        meta:
+          ai_description: |
+            Взаимные остатки между компаниями группы, которые исключаются 
+            при консолидации (дебиторка одной компании = кредиторка другой).
+            
+            Пример: Если Компания А должна Компании Б 1 млн рублей, то в 
+            консолидированной отчетности этот остаток элиминируется, 
+            так как группа сама себе не должна.
+      
+      - name: intercompanyRevenueElim
+        sql: intercompany_revenue_elim
+        type: sum
+        title: "Элиминация внутригрупповой выручки"
+        description: "Выручка от продаж между компаниями группы"
+        format: currency
+        meta:
+          ai_description: |
+            Выручка от продаж внутри группы исключается, так как группа 
+            не может заработать на продажах самой себе.
+            
+            Пример: Компания А продала товар Компании Б за 2 млн рублей.
+            В консолидированной отчетности эти 2 млн исключаются из выручки.
+      
+      # ----------------------------------------------------------------------
+      # КОНСОЛИДИРОВАННЫЕ ПОКАЗАТЕЛИ (после элиминаций)
+      # ----------------------------------------------------------------------
+      - name: consolidatedDebitBalance
+        sql: consolidated_debit_balance
+        type: sum
+        title: "Дебет консолидированный"
+        description: "Дебетовый остаток после элиминаций"
+        format: currency
+        meta:
+          ai_description: |
+            Дебетовый остаток группы после исключения внутригрупповых операций.
+            Это "чистая" позиция группы перед внешними контрагентами.
+      
+      - name: consolidatedCreditBalance
+        sql: consolidated_credit_balance
+        type: sum
+        title: "Кредит консолидированный"
+        description: "Кредитовый остаток после элиминаций"
+        format: currency
+      
+      - name: consolidatedRevenue
+        sql: consolidated_revenue
+        type: sum
+        title: "Выручка консолидированная"
+        description: "Выручка от внешних клиентов (без внутригрупповых продаж)"
+        format: currency
+        meta:
+          ai_description: |
+            Выручка группы от внешних клиентов.
+            Продажи между компаниями группы исключены.
+            
+            Это ключевой показатель для анализа реальной деятельности холдинга.
+      
+      - name: consolidatedNetBalance
+        sql: consolidated_debit_balance - consolidated_credit_balance
+        type: sum
+        title: "Нетто-баланс консолидированный"
+        description: "Свернутое сальдо группы"
+        format: currency
+      
+      # ----------------------------------------------------------------------
+      # АНАЛИТИЧЕСКИЕ ПОКАЗАТЕЛИ
+      # ----------------------------------------------------------------------
+      - name: eliminationRate
+        sql: >
+          CASE 
+            WHEN ${totalCreditTurnover} > 0 
+            THEN (${intercompanyRevenueElim} / ${totalCreditTurnover}) * 100
+            ELSE 0 
+          END
+        type: avg
+        title: "Доля внутригрупповых операций (%)"
+        description: "Процент внутригрупповых продаж от общей выручки"
+        format: percent
+        meta:
+          ai_description: |
+            Показывает, какой процент выручки приходится на продажи 
+            внутри группы.
+            
+            Интерпретация:
+            - < 10%: Низкая интеграция между компаниями
+            - 10-30%: Умеренная интеграция
+            - > 30%: Высокая интеграция (возможны трансфертные цены)
+      
+      - name: consolidationAdjustment
+        sql: ${totalDebitBalance} - ${consolidatedDebitBalance}
+        type: sum
+        title: "Корректировка консолидации"
+        description: "Разница между суммарными и консолидированными показателями"
+        format: currency
+    
+    # ========================================================================
+    # SEGMENTS
+    # ========================================================================
+    segments:
+      # Счета с существенными элиминациями
+      - name: significantEliminations
+        sql: ${intercompanyBalanceElim} > 1000000  -- > 1 млн руб.
+        title: "Существенные элиминации"
+        description: "Счета с элиминациями более 1 млн рублей"
+      
+      # Операционные активы группы
+      - name: operatingAssets
+        sql: >
+          ${balanceEquationClass} = 'OPERATING_ASSETS' 
+          AND ${consolidatedDebitBalance} > 0
+        title: "Операционные активы"
+        description: "Активы основной деятельности группы"
+      
+      # Финансовый долг группы
+      - name: netDebt
+        sql: ${balanceEquationClass} = 'NET_DEBT'
+        title: "Чистый долг"
+        description: "Финансовые обязательства группы"
+      
+      # Собственный капитал группы
+      - name: groupEquity
+        sql: ${balanceEquationClass} = 'EQUITY'
+        title: "Капитал группы"
+        description: "Собственный капитал холдинга"
+    
+    # ========================================================================
+    # PRE-AGGREGATIONS
+    # ========================================================================
+    preAggregations:
+      - name: consolidatedByGroup
+        measures:
+          - consolidatedDebitBalance
+          - consolidatedCreditBalance
+          - consolidatedRevenue
+          - intercompanyRevenueElim
+          - eliminationRate
+        dimensions:
+          - groupName
+          - balanceMgmtGroup
+          - periodDate
+        timeDimension: periodDate
+        granularity: month
+        refreshKey:
+          every: 2 hours
+
+
+# ============================================================================
+# ДОПОЛНИТЕЛЬНЫЙ КУБ: Вертикальный анализ (структура баланса)
+# ============================================================================
+
+  - name: VerticalAnalysis
+    sql: >
+      WITH balance_totals AS (
+        SELECT 
+          tb.company_id,
+          c.company_name,
+          tb.period_date,
+          a.balance_mgmt_group,
+          a.balance_equation_class,
+          a.account_code,
+          a.account_name,
+          (tb.closing_debit_balance - tb.closing_credit_balance) as net_balance,
+          -- Итого активов
+          SUM((tb.closing_debit_balance - tb.closing_credit_balance)) 
+            FILTER (WHERE a.account_type = 'ASSET' AND (tb.closing_debit_balance - tb.closing_credit_balance) > 0)
+            OVER (PARTITION BY tb.company_id, tb.period_date) as total_assets,
+          -- Итого обязательств
+          SUM(ABS(tb.closing_debit_balance - tb.closing_credit_balance)) 
+            FILTER (WHERE a.account_type IN ('LIABILITY', 'OTHER') AND a.rsbu_type = 'П' AND (tb.closing_debit_balance - tb.closing_credit_balance) < 0)
+            OVER (PARTITION BY tb.company_id, tb.period_date) as total_liabilities,
+          -- Итого выручки
+          SUM(tb.credit_turnover) 
+            FILTER (WHERE a.account_code LIKE '90.01%')
+            OVER (PARTITION BY tb.company_id, tb.period_date) as total_revenue
+        FROM trial_balance tb
+        INNER JOIN companies c ON tb.company_id = c.company_id
+        INNER JOIN accounts a ON tb.account_id = a.account_id
+      )
+      SELECT 
+        company_id,
+        company_name,
+        period_date,
+        balance_mgmt_group,
+        balance_equation_class,
+        account_code,
+        account_name,
+        net_balance,
+        total_assets,
+        total_liabilities,
+        total_revenue
+      FROM balance_totals
+    
+    title: "Вертикальный анализ"
+    description: >
+      Структурный анализ баланса и отчета о прибылях и убытках.
+      Показывает долю каждой статьи в общем итоге.
+    
+    dimensions:
+      - name: companyName
+        sql: company_name
+        type: string
+        title: "Компания"
+      
+      - name: periodDate
+        sql: period_date
+        type: time
+        title: "Период"
+      
+      - name: accountCode
+        sql: account_code
+        type: string
+        title: "Счет"
+      
+      - name: accountName
+        sql: account_name
+        type: string
+        title: "Наименование счета"
+      
+      - name: balanceMgmtGroup
+        sql: balance_mgmt_group
+        type: string
+        title: "Группа баланса"
+      
+      - name: balanceEquationClass
+        sql: balance_equation_class
+        type: string
+        title: "Класс"
+    
+    measures:
+      # Абсолютные значения
+      - name: netBalance
+        sql: net_balance
+        type: sum
+        title: "Остаток"
+        format: currency
+      
+      - name: totalAssets
+        sql: total_assets
+        type: max  # Уже агрегировано в SQL
+        title: "Всего активов"
+        format: currency
+      
+      - name: totalLiabilities
+        sql: total_liabilities
+        type: max
+        title: "Всего обязательств"
+        format: currency
+      
+      - name: totalRevenue
+        sql: total_revenue
+        type: max
+        title: "Всего выручки"
+        format: currency
+      
+      # Доли в структуре (%)
+      - name: shareOfAssets
+        sql: >
+          CASE 
+            WHEN ${totalAssets} > 0 AND ${netBalance} > 0
+            THEN (${netBalance} / ${totalAssets}) * 100
+            ELSE 0 
+          END
+        type: avg
+        title: "Доля в активах (%)"
+        description: "Структура активов"
+        format: percent
+        meta:
+          ai_description: |
+            Показывает, какой процент от общей суммы активов 
+            приходится на данную статью.
+            
+            Пример: Если денежные средства = 5 млн, а всего активов = 50 млн,
+            то доля = 10%.
+      
+      - name: shareOfLiabilities
+        sql: >
+          CASE 
+            WHEN ${totalLiabilities} > 0 AND ${netBalance} < 0
+            THEN (ABS(${netBalance}) / ${totalLiabilities}) * 100
+            ELSE 0 
+          END
+        type: avg
+        title: "Доля в обязательствах (%)"
+        description: "Структура пассивов"
+        format: percent
+      
+      - name: shareOfRevenue
+        sql: >
+          CASE 
+            WHEN ${totalRevenue} > 0 
+            THEN (ABS(${netBalance}) / ${totalRevenue}) * 100
+            ELSE 0 
+          END
+        type: avg
+        title: "Доля в выручке (%)"
+        description: "Структура затрат относительно выручки"
+        format: percent
+        meta:
+          ai_description: |
+            Показывает, какой процент от выручки составляет данная статья.
+            
+            Полезно для анализа структуры затрат и рентабельности.
+    
+    segments:
+      # Существенные статьи (>5% от итога)
+      - name: materialItems
+        sql: >
+          (${shareOfAssets} > 5) OR (${shareOfLiabilities} > 5)
+        title: "Существенные статьи"
+        description: "Статьи с долей более 5%"
+    
+    preAggregations:
+      - name: verticalByCompany
+        measures:
+          - netBalance
+          - totalAssets
+          - shareOfAssets
+        dimensions:
+          - companyName
+          - balanceMgmtGroup
+          - periodDate
+        timeDimension: periodDate
+        granularity: month
+        refreshKey:
+          every: 2 hours
