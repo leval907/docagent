@@ -52,7 +52,16 @@
 
 **Применение:** Анализ бенефициаров, поиск скрытых связей
 
-### 6. **Semantic Layer** (Cube.js) 🆕
+### 6. **Master Schema - Справочники** (PostgreSQL) 🆕
+- **План счетов** (416 счетов) - с группами ликвидности A1-A4, P1-P4
+- **Справочник ДДС** (72 статьи) - категории движения денежных средств
+- **Справочник затрат** (167 статей) - постоянные/переменные затраты
+- **ОКВЭД 2** (2818 кодов) - классификатор видов деятельности
+- **Коды РСБУ** (177 кодов) - строки бухгалтерских форм (Баланс, ОФР, ОДК)
+
+**Применение:** Нормализация данных, автоматическое формирование отчетности, классификация компаний
+
+### 7. **Semantic Layer** (Cube.js) 🆕
 - Единая модель данных поверх PostgreSQL
 - SQL API (Postgres Proxy) для BI-инструментов
 - Автоматическая агрегация и кэширование
@@ -60,7 +69,7 @@
 
 **Применение:** Подключение DataLens/Metabase, дашборды, консолидированная отчётность
 
-### 7. **Agentic Workflows** (LangGraph) 🆕
+### 8. **Agentic Workflows** (LangGraph) 🆕
 - Оркестрация сложных агентов
 - Управление состоянием и памятью
 - Циклические графы выполнения
@@ -90,7 +99,9 @@ docagent/
 │   ├── QUICK_START.md      # Быстрый старт
 │   ├── PIPELINE_GUIDE.md   # Гайд по пайплайнам
 │   ├── FINANCIAL_QUICKSTART.md  # Для финансистов
-│   └── CUBE_ANALYTICS.md   # Cube.js semantic layer 🆕
+│   ├── CUBE_ANALYTICS.md   # Cube.js semantic layer 🆕
+│   ├── OKVED_INTEGRATION.md # Интеграция ОКВЭД 🆕
+│   └── MASTER_REFERENCES.md # Справочники master schema 🆕
 ├── scripts/
 │   ├── processors/         # Обработка данных
 │   │   ├── docling_processor.py    # PDF/DOCX → Markdown
@@ -100,6 +111,11 @@ docagent/
 │   ├── finance/            # Финансы (ОСВ)
 │   │   ├── import_osv_improved.py  # Импорт ОСВ
 │   │   ├── consolidated_report.py  # Сводный отчет
+│   │   ├── etl/            # ETL для справочников 🆕
+│   │   │   ├── load_okved.py       # Загрузка ОКВЭД
+│   │   │   ├── load_dds_from_excel.py  # Загрузка ДДС
+│   │   │   ├── load_cost_from_csv.py   # Загрузка затрат
+│   │   │   └── load_rsbu_codes.py      # Загрузка кодов РСБУ
 │   │   └── README.md               # Документация
 │   └── examples/           # Примеры использования
 │       ├── test_pipeline_full.py   # Полный пайплайн
@@ -266,6 +282,8 @@ Excel/CSV   Python       S3 (meta)   ArangoDB  DataLens
 - [Работа с DuckDB](docs/DUCKDB_INTEGRATION.md)
 - [Архитектура пайплайнов](docs/PIPELINE_GUIDE.md)
 - [Cube.js Analytics](docs/CUBE_ANALYTICS.md) 🆕
+- [Интеграция ОКВЭД](docs/OKVED_INTEGRATION.md) 🆕
+- [Справочники Master Schema](docs/MASTER_REFERENCES.md) 🆕
 
 ## 🤝 Поддержка
 
