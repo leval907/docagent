@@ -1,0 +1,4 @@
+ id | filename | company_raw | period | account_type | subaccount | item_name | amount_dt | amount_kt | etl_loaded_at 
+----+----------+-------------+--------+--------------+------------+-----------+-----------+-----------+---------------
+(0 rows)
+

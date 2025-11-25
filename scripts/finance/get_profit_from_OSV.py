@@ -73,7 +73,7 @@ def get_osv_data(company_id: int):
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     
-    # Assuming history.osv_detail has company_id and account_code
+    # Using history.osv_9m_summary (9 months aggregated data)
     # We need to join with chart_of_accounts to get account names
     query = """
         SELECT 
@@ -81,7 +81,7 @@ def get_osv_data(company_id: int):
             c.account_name,
             SUM(o.debit_turnover) as turnover_dt,
             SUM(o.credit_turnover) as turnover_kt
-        FROM history.osv_detail o
+        FROM history.osv_9m_summary o
         LEFT JOIN master.chart_of_accounts c ON o.account_code = c.account_code
         WHERE o.company_id = %s
         GROUP BY o.account_code, c.account_name

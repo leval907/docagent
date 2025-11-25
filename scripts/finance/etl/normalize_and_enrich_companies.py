@@ -297,7 +297,7 @@ class CompanyNormalizer:
             # Обновляем ссылки в history.osv_detail
             for dup_id in duplicate_ids:
                 cursor.execute("""
-                    UPDATE history.osv_detail 
+                    UPDATE history.osv_9m_summary 
                     SET company_id = %s 
                     WHERE company_id = %s
                 """, (master_id, dup_id))

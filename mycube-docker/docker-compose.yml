@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  cube:
+    image: cubejs/cube:latest
+    container_name: cube-analytics
+    ports:
+      - "4000:4000"   # Cube Playground
+      - "15432:15432" # SQL API для DataLens
+    environment:
+      - CUBEJS_DEV_MODE=true
+      - CUBEJS_DB_TYPE=postgres
+      - CUBEJS_DB_HOST=host.docker.internal
+      - CUBEJS_DB_PORT=5432
+      - CUBEJS_DB_NAME=analytics
+      - CUBEJS_DB_USER=analytics_user
+      - CUBEJS_DB_PASS=analytics_secure_2025
+      - CUBEJS_API_SECRET=cube_secret_key_2025
+      - CUBEJS_SQL_PORT=15432
+    volumes:
+      - ./model:/cube/conf/model
+      - ./.cubestore:/cube/conf/.cubestore
+    networks:
+      - analytics
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+networks:
+  analytics:
+    driver: bridge

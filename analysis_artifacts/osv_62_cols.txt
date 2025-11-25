@@ -1,0 +1,26 @@
+                                               Table "history.osv_62_revenue"
+      Column      |            Type             | Collation | Nullable |                      Default                       
+------------------+-----------------------------+-----------+----------+----------------------------------------------------
+ id               | integer                     |           | not null | nextval('history.osv_62_revenue_id_seq'::regclass)
+ company_raw      | text                        |           | not null | 
+ counterparty     | text                        |           | not null | 
+ document         | text                        |           |          | 
+ balance_begin_dt | numeric(15,2)               |           |          | 
+ balance_begin_kt | numeric(15,2)               |           |          | 
+ turnover_62_90   | numeric(15,2)               |           |          | 
+ turnover_62_91   | numeric(15,2)               |           |          | 
+ turnover_51_62   | numeric(15,2)               |           |          | 
+ turnover_60_62   | numeric(15,2)               |           |          | 
+ turnover_76_62   | numeric(15,2)               |           |          | 
+ turnover_62_51   | numeric(15,2)               |           |          | 
+ turnover_62_60   | numeric(15,2)               |           |          | 
+ turnover_kt      | numeric(15,2)               |           |          | 
+ balance_end_dt   | numeric(15,2)               |           |          | 
+ balance_end_kt   | numeric(15,2)               |           |          | 
+ created_at       | timestamp without time zone |           |          | CURRENT_TIMESTAMP
+Indexes:
+    "osv_62_revenue_pkey" PRIMARY KEY, btree (id)
+    "idx_osv_62_company" btree (company_raw)
+    "idx_osv_62_counterparty" btree (counterparty)
+    "unique_company_counterparty_doc" UNIQUE CONSTRAINT, btree (company_raw, counterparty, document)
+

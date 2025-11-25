@@ -4,13 +4,6 @@ cube(`ProfitAndLoss`, {
   title: "Profit & Loss (P&L)",
   description: "AI-generated P&L statements from OSV data via GigaChat agent",
   
-  joins: {
-    Companies: {
-      sql: `${CUBE}.company_code = ${Companies}.companyCode`,
-      relationship: `belongsTo`
-    }
-  },
-  
   measures: {
     count: {
       type: `count`,
@@ -253,27 +246,6 @@ cube(`ProfitAndLoss`, {
       sql: `"Dividends Paid" > 0`,
       title: "Dividend-Paying Companies",
       description: "Companies that paid dividends"
-    }
-  },
-  
-  preAggregations: {
-    main: {
-      measures: [
-        ProfitAndLoss.totalRevenue,
-        ProfitAndLoss.totalCostOfGoods,
-        ProfitAndLoss.totalOverheads,
-        ProfitAndLoss.grossProfit,
-        ProfitAndLoss.netProfit
-      ],
-      dimensions: [
-        ProfitAndLoss.companyCode,
-        ProfitAndLoss.companyName
-      ],
-      timeDimension: ProfitAndLoss.createdAt,
-      granularity: `month`,
-      refreshKey: {
-        every: `1 hour`
-      }
     }
   }
 });

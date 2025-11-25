@@ -51,7 +51,7 @@ def clear_chart_of_accounts(conn):
     
     try:
         # Сначала очистим зависимые данные в history.osv_detail
-        cursor.execute("SELECT COUNT(*) FROM history.osv_detail")
+        cursor.execute("SELECT COUNT(*) FROM history.osv_9m_summary")
         osv_count = cursor.fetchone()[0]
         print(f"   История: {osv_count} записей в osv_detail")
         

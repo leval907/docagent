@@ -1,0 +1,118 @@
+version: 2
+
+sources:
+  - name: history
+    description: "Raw historical data from source systems"
+    database: analytics
+    schema: history
+    tables:
+      - name: osv_9m_summary
+        description: "ОСВ за 9 месяцев - основные обороты"
+        columns:
+          - name: id
+            description: "Primary key"
+          - name: company_id
+            description: "Foreign key to master.companies"
+          - name: account_code
+            description: "Счет бухгалтерского учета"
+          - name: debit_turnover
+            description: "Оборот по дебету"
+          - name: credit_turnover
+            description: "Оборот по кредиту"
+      
+      - name: osv_9m_costs
+        description: "Структура затрат по счетам 20, 26, 44 за 9 месяцев"
+        columns:
+          - name: id
+            description: "Primary key"
+          - name: company_raw
+            description: "Название компании"
+          - name: account_type
+            description: "Номер счёта (20, 26, 44)"
+          - name: cost_item
+            description: "Статья затрат"
+          - name: amount_dt
+            description: "Начисленные затраты"
+          - name: amount_kt
+            description: "Списанные затраты"
+      
+      - name: osv_h1_summary
+        description: "ОСВ за первое полугодие - 6 компаний × 6 месяцев"
+      
+      - name: osv_detailed
+        description: "Детализация оборотов по субконто"
+
+  - name: master
+    description: "Master data and reference tables"
+    database: analytics
+    schema: master
+    tables:
+      - name: companies
+        description: "Справочник организаций"
+        columns:
+          - name: id
+            description: "Primary key"
+          - name: company_code
+            description: "Код компании"
+          - name: company_name
+            description: "Наименование"
+          - name: inn
+            description: "ИНН"
+      
+      - name: company_name_mapping
+        description: "Маппинг названий компаний из исходных файлов на справочник"
+        columns:
+          - name: id
+            description: "Primary key"
+          - name: source_name
+            description: "Исходное название из osv_9m_costs"
+          - name: target_company_id
+            description: "Foreign key to companies.id"
+      
+      - name: chart_of_accounts
+        description: "План счетов бухгалтерского учета"
+        columns:
+          - name: id
+            description: "Primary key"
+          - name: account_code
+            description: "Номер счета"
+          - name: account_name
+            description: "Название счета"
+          - name: pnl_flag
+            description: "Признак счета для отчета о прибылях и убытках"
+      
+      - name: cost_categories
+        description: "Справочник категорий затрат (постоянные/переменные)"
+        columns:
+          - name: id
+            description: "Primary key"
+          - name: code
+            description: "Код категории"
+          - name: name_ru
+            description: "Название категории"
+      
+      - name: cost_groups
+        description: "Справочник групп затрат"
+        columns:
+          - name: id
+            description: "Primary key"
+          - name: group_code
+            description: "Код группы"
+          - name: name_ru
+            description: "Название группы"
+          - name: category_id
+            description: "Foreign key to cost_categories"
+      
+      - name: cost_items
+        description: "Справочник статей затрат"
+        columns:
+          - name: id
+            description: "Primary key"
+          - name: code
+            description: "Код статьи"
+          - name: name_ru
+            description: "Название статьи с кодом в скобках"
+          - name: category_id
+            description: "Foreign key to cost_categories"
+          - name: group_id
+            description: "Foreign key to cost_groups"

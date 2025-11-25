@@ -1,0 +1,180 @@
+                                 List of relations
+       Schema       |             Name              |    Type     |     Owner      
+--------------------+-------------------------------+-------------+----------------
+ analytics          | fct_activity_summary          | table       | analytics_user
+ analytics          | fct_companies_by_activity     | table       | analytics_user
+ analytics          | fct_cost_of_sales_breakdown   | table       | analytics_user
+ analytics          | fct_cost_structure_by_company | table       | analytics_user
+ analytics          | profit_loss_9m                | table       | analytics_user
+ analytics          | profit_v                      | table       | analytics_user
+ audit              | data_quality_checks           | table       | analytics_user
+ audit              | upload_log                    | table       | analytics_user
+ history            | cashflow_movements            | table       | analytics_user
+ history            | osv_51                        | table       | analytics_user
+ history            | osv_60                        | table       | analytics_user
+ history            | osv_62                        | table       | analytics_user
+ history            | osv_62_revenue                | table       | analytics_user
+ history            | osv_91                        | table       | analytics_user
+ history            | osv_9m_costs                  | table       | analytics_user
+ history            | osv_9m_summary                | table       | analytics_user
+ history            | osv_detailed                  | table       | analytics_user
+ history            | osv_h1_summary                | table       | analytics_user
+ history            | revenue_analysis              | table       | analytics_user
+ information_schema | sql_features                  | table       | analytics_user
+ information_schema | sql_implementation_info       | table       | analytics_user
+ information_schema | sql_parts                     | table       | analytics_user
+ information_schema | sql_sizing                    | table       | analytics_user
+ master             | account_rsbu_mapping          | table       | analytics_user
+ master             | chart_of_accounts             | table       | analytics_user
+ master             | companies                     | table       | analytics_user
+ master             | companies_okved               | table       | analytics_user
+ master             | company_name_mapping          | table       | analytics_user
+ master             | cost_categories               | table       | analytics_user
+ master             | cost_groups                   | table       | analytics_user
+ master             | cost_items                    | table       | analytics_user
+ master             | cost_items_mapping            | table       | analytics_user
+ master             | counterparties                | table       | analytics_user
+ master             | counterparties_okved          | table       | analytics_user
+ master             | dds_categories                | table       | analytics_user
+ master             | dds_groups                    | table       | analytics_user
+ master             | dds_items                     | table       | analytics_user
+ master             | dds_items_mapping             | table       | analytics_user
+ master             | okved                         | table       | analytics_user
+ master             | periods                       | table       | analytics_user
+ master             | rsbu_codes                    | table       | analytics_user
+ pg_catalog         | pg_aggregate                  | table       | analytics_user
+ pg_catalog         | pg_am                         | table       | analytics_user
+ pg_catalog         | pg_amop                       | table       | analytics_user
+ pg_catalog         | pg_amproc                     | table       | analytics_user
+ pg_catalog         | pg_attrdef                    | table       | analytics_user
+ pg_catalog         | pg_attribute                  | table       | analytics_user
+ pg_catalog         | pg_auth_members               | table       | analytics_user
+ pg_catalog         | pg_authid                     | table       | analytics_user
+ pg_catalog         | pg_cast                       | table       | analytics_user
+ pg_catalog         | pg_class                      | table       | analytics_user
+ pg_catalog         | pg_collation                  | table       | analytics_user
+ pg_catalog         | pg_constraint                 | table       | analytics_user
+ pg_catalog         | pg_conversion                 | table       | analytics_user
+ pg_catalog         | pg_database                   | table       | analytics_user
+ pg_catalog         | pg_db_role_setting            | table       | analytics_user
+ pg_catalog         | pg_default_acl                | table       | analytics_user
+ pg_catalog         | pg_depend                     | table       | analytics_user
+ pg_catalog         | pg_description                | table       | analytics_user
+ pg_catalog         | pg_enum                       | table       | analytics_user
+ pg_catalog         | pg_event_trigger              | table       | analytics_user
+ pg_catalog         | pg_extension                  | table       | analytics_user
+ pg_catalog         | pg_foreign_data_wrapper       | table       | analytics_user
+ pg_catalog         | pg_foreign_server             | table       | analytics_user
+ pg_catalog         | pg_foreign_table              | table       | analytics_user
+ pg_catalog         | pg_index                      | table       | analytics_user
+ pg_catalog         | pg_inherits                   | table       | analytics_user
+ pg_catalog         | pg_init_privs                 | table       | analytics_user
+ pg_catalog         | pg_language                   | table       | analytics_user
+ pg_catalog         | pg_largeobject                | table       | analytics_user
+ pg_catalog         | pg_largeobject_metadata       | table       | analytics_user
+ pg_catalog         | pg_namespace                  | table       | analytics_user
+ pg_catalog         | pg_opclass                    | table       | analytics_user
+ pg_catalog         | pg_operator                   | table       | analytics_user
+ pg_catalog         | pg_opfamily                   | table       | analytics_user
+ pg_catalog         | pg_parameter_acl              | table       | analytics_user
+ pg_catalog         | pg_partitioned_table          | table       | analytics_user
+ pg_catalog         | pg_policy                     | table       | analytics_user
+ pg_catalog         | pg_proc                       | table       | analytics_user
+ pg_catalog         | pg_publication                | table       | analytics_user
+ pg_catalog         | pg_publication_namespace      | table       | analytics_user
+ pg_catalog         | pg_publication_rel            | table       | analytics_user
+ pg_catalog         | pg_range                      | table       | analytics_user
+ pg_catalog         | pg_replication_origin         | table       | analytics_user
+ pg_catalog         | pg_rewrite                    | table       | analytics_user
+ pg_catalog         | pg_seclabel                   | table       | analytics_user
+ pg_catalog         | pg_sequence                   | table       | analytics_user
+ pg_catalog         | pg_shdepend                   | table       | analytics_user
+ pg_catalog         | pg_shdescription              | table       | analytics_user
+ pg_catalog         | pg_shseclabel                 | table       | analytics_user
+ pg_catalog         | pg_statistic                  | table       | analytics_user
+ pg_catalog         | pg_statistic_ext              | table       | analytics_user
+ pg_catalog         | pg_statistic_ext_data         | table       | analytics_user
+ pg_catalog         | pg_subscription               | table       | analytics_user
+ pg_catalog         | pg_subscription_rel           | table       | analytics_user
+ pg_catalog         | pg_tablespace                 | table       | analytics_user
+ pg_catalog         | pg_transform                  | table       | analytics_user
+ pg_catalog         | pg_trigger                    | table       | analytics_user
+ pg_catalog         | pg_ts_config                  | table       | analytics_user
+ pg_catalog         | pg_ts_config_map              | table       | analytics_user
+ pg_catalog         | pg_ts_dict                    | table       | analytics_user
+ pg_catalog         | pg_ts_parser                  | table       | analytics_user
+ pg_catalog         | pg_ts_template                | table       | analytics_user
+ pg_catalog         | pg_type                       | table       | analytics_user
+ pg_catalog         | pg_user_mapping               | table       | analytics_user
+ pg_toast           | pg_toast_1213                 | TOAST table | analytics_user
+ pg_toast           | pg_toast_1247                 | TOAST table | analytics_user
+ pg_toast           | pg_toast_1255                 | TOAST table | analytics_user
+ pg_toast           | pg_toast_1260                 | TOAST table | analytics_user
+ pg_toast           | pg_toast_1262                 | TOAST table | analytics_user
+ pg_toast           | pg_toast_13396                | TOAST table | analytics_user
+ pg_toast           | pg_toast_13401                | TOAST table | analytics_user
+ pg_toast           | pg_toast_13406                | TOAST table | analytics_user
+ pg_toast           | pg_toast_13411                | TOAST table | analytics_user
+ pg_toast           | pg_toast_1417                 | TOAST table | analytics_user
+ pg_toast           | pg_toast_1418                 | TOAST table | analytics_user
+ pg_toast           | pg_toast_19498                | TOAST table | analytics_user
+ pg_toast           | pg_toast_19510                | TOAST table | analytics_user
+ pg_toast           | pg_toast_19525                | TOAST table | analytics_user
+ pg_toast           | pg_toast_19581                | TOAST table | analytics_user
+ pg_toast           | pg_toast_19647                | TOAST table | analytics_user
+ pg_toast           | pg_toast_19655                | TOAST table | analytics_user
+ pg_toast           | pg_toast_19663                | TOAST table | analytics_user
+ pg_toast           | pg_toast_19680                | TOAST table | analytics_user
+ pg_toast           | pg_toast_19693                | TOAST table | analytics_user
+ pg_toast           | pg_toast_19898                | TOAST table | analytics_user
+ pg_toast           | pg_toast_19921                | TOAST table | analytics_user
+ pg_toast           | pg_toast_19973                | TOAST table | analytics_user
+ pg_toast           | pg_toast_19996                | TOAST table | analytics_user
+ pg_toast           | pg_toast_20023                | TOAST table | analytics_user
+ pg_toast           | pg_toast_20130                | TOAST table | analytics_user
+ pg_toast           | pg_toast_20185                | TOAST table | analytics_user
+ pg_toast           | pg_toast_20578                | TOAST table | analytics_user
+ pg_toast           | pg_toast_20588                | TOAST table | analytics_user
+ pg_toast           | pg_toast_20598                | TOAST table | analytics_user
+ pg_toast           | pg_toast_20608                | TOAST table | analytics_user
+ pg_toast           | pg_toast_20618                | TOAST table | analytics_user
+ pg_toast           | pg_toast_20628                | TOAST table | analytics_user
+ pg_toast           | pg_toast_20638                | TOAST table | analytics_user
+ pg_toast           | pg_toast_20685                | TOAST table | analytics_user
+ pg_toast           | pg_toast_20775                | TOAST table | analytics_user
+ pg_toast           | pg_toast_20839                | TOAST table | analytics_user
+ pg_toast           | pg_toast_20897                | TOAST table | analytics_user
+ pg_toast           | pg_toast_20902                | TOAST table | analytics_user
+ pg_toast           | pg_toast_20911                | TOAST table | analytics_user
+ pg_toast           | pg_toast_20916                | TOAST table | analytics_user
+ pg_toast           | pg_toast_2328                 | TOAST table | analytics_user
+ pg_toast           | pg_toast_2396                 | TOAST table | analytics_user
+ pg_toast           | pg_toast_2600                 | TOAST table | analytics_user
+ pg_toast           | pg_toast_2604                 | TOAST table | analytics_user
+ pg_toast           | pg_toast_2606                 | TOAST table | analytics_user
+ pg_toast           | pg_toast_2609                 | TOAST table | analytics_user
+ pg_toast           | pg_toast_2612                 | TOAST table | analytics_user
+ pg_toast           | pg_toast_2615                 | TOAST table | analytics_user
+ pg_toast           | pg_toast_2618                 | TOAST table | analytics_user
+ pg_toast           | pg_toast_2619                 | TOAST table | analytics_user
+ pg_toast           | pg_toast_2620                 | TOAST table | analytics_user
+ pg_toast           | pg_toast_2964                 | TOAST table | analytics_user
+ pg_toast           | pg_toast_3079                 | TOAST table | analytics_user
+ pg_toast           | pg_toast_3118                 | TOAST table | analytics_user
+ pg_toast           | pg_toast_3256                 | TOAST table | analytics_user
+ pg_toast           | pg_toast_3350                 | TOAST table | analytics_user
+ pg_toast           | pg_toast_3381                 | TOAST table | analytics_user
+ pg_toast           | pg_toast_3394                 | TOAST table | analytics_user
+ pg_toast           | pg_toast_3429                 | TOAST table | analytics_user
+ pg_toast           | pg_toast_3456                 | TOAST table | analytics_user
+ pg_toast           | pg_toast_3466                 | TOAST table | analytics_user
+ pg_toast           | pg_toast_3592                 | TOAST table | analytics_user
+ pg_toast           | pg_toast_3596                 | TOAST table | analytics_user
+ pg_toast           | pg_toast_3600                 | TOAST table | analytics_user
+ pg_toast           | pg_toast_6000                 | TOAST table | analytics_user
+ pg_toast           | pg_toast_6100                 | TOAST table | analytics_user
+ pg_toast           | pg_toast_6106                 | TOAST table | analytics_user
+ pg_toast           | pg_toast_6243                 | TOAST table | analytics_user
+ pg_toast           | pg_toast_826                  | TOAST table | analytics_user
+(175 rows)
+

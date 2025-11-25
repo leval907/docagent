@@ -1,0 +1,26 @@
+                Table "analytics.fct_cost_structure_by_company"
+        Column        |          Type          | Collation | Nullable | Default 
+----------------------+------------------------+-----------+----------+---------
+ company_code         | character varying(50)  |           |          | 
+ company_name         | character varying(255) |           |          | 
+ inn                  | character varying(12)  |           |          | 
+ category_code        | character varying(20)  |           |          | 
+ category_name        | character varying(200) |           |          | 
+ group_code           | character varying(50)  |           |          | 
+ group_name           | character varying(200) |           |          | 
+ item_code            | character varying(20)  |           |          | 
+ item_name            | character varying(500) |           |          | 
+ account_code         | character varying(10)  |           |          | 
+ account_name         | text                   |           |          | 
+ total_debit          | numeric                |           |          | 
+ total_credit         | numeric                |           |          | 
+ net_amount           | numeric                |           |          | 
+ records_count        | bigint                 |           |          | 
+ mapping_status       | text                   |           |          | 
+ company_total_debit  | numeric                |           |          | 
+ pct_of_company_total | numeric                |           |          | 
+ category_total_debit | numeric                |           |          | 
+ pct_of_category      | numeric                |           |          | 
+ group_total_debit    | numeric                |           |          | 
+ pct_of_group         | numeric                |           |          | 
+

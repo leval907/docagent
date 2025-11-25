@@ -1,0 +1,27 @@
+             company_code              |       company_name        
+---------------------------------------+---------------------------
+ DZhUL_LAIF                            | ДЖУЛ ЛАЙФ ООО
+ VAITERA                               | ВАЙТЕРА ООО
+ GROSS_GRUP_DI                         | ГРОСС ГРУП ДИ ООО
+ GLOBALKONSALT                         | ГЛОБАЛКОНСАЛТ ООО
+ PARTNER                               | ПАРТНЕР ООО
+ MONOLIT                               | МОНОЛИТ ООО
+ GROSS_GRUP_M                          | ГРОСС ГРУП М ООО
+ GRANDPROM_AO                          | ГРАНДПРОМ АО
+ LITORUS                               | ЛИТОРУС ООО
+ VORPAL                                | ВОРПАЛ ЗАО
+ IuG_ISTEIT_INZhINIRING                | ЮГ ИСТЕЙТ ИНЖИНИРИНГ ООО
+ TEKTONIKA                             | ТЕКТОНИКА ООО
+ BOS                                   | БОС ООО
+ FETER                                 | ФЕТЕР ООО
+ IP_ShINDIaPIN_ALEKSANDR_VLADIMIROVICh | Шиндяпин А.В. ИП
+ REKREATsIONNYE_SISTEMY                | РЕКРЕАЦИОННЫЕ СИСТЕМЫ ООО
+ AO_K-STROI                            | К-СТРОЙ АО
+ SGK-REGION                            | СГК-РЕГИОН ООО
+ VLADENIE-V                            | ВЛАДЕНИЕ-В ООО
+ UK_GROSS                              | УК ГРОСС ООО
+ LESNOE                                | Лесное ООО
+ AL'IaNS                               | АЛЬЯНС ООО
+ VSENARODNYI_FERMERSKII_TsENTR         | ВФЦ ООО
+(23 rows)
+

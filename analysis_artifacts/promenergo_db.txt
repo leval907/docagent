@@ -1,0 +1,5 @@
+ id  | counterparty_code | counterparty_name |    inn     | is_internal | counterparty_type | is_active |         created_at         | primary_okved 
+-----+-------------------+-------------------+------------+-------------+-------------------+-----------+----------------------------+---------------
+ 581 | PROMENERGO_AO     | ПромЭнерго АО     | 7825671186 | f           |                   | t         | 2025-11-20 16:58:24.322536 | 
+(1 row)
+
